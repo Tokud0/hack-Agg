@@ -195,7 +195,10 @@ def test_describing_a_scenario_offline_reads_the_counts(client):
     res = client.post("/api/scenario/describe", json={"text": "2 tractors, 4 fields and 6 jobs please"})
     body = res.json()
     assert res.status_code == 200 and body["source"] == "template"
-    assert (len(body["scenario"]["tractors"]), len(body["scenario"]["fields"]), len(body["scenario"]["jobs"])) == (2, 4, 6)
+    scenario = body["scenario"]
+    assert (len(scenario["tractors"]), len(scenario["fields"])) == (2, 4)
+    # The seed is random and the result is then made finishable, which may drop a job that cannot fit.
+    assert 1 <= len(scenario["jobs"]) <= 6 and len(scenario["jobs"]) + sum("removed" in c for c in body["changes"]) == 6
 
 
 def test_invalid_scenario_is_rejected(client):

@@ -1,7 +1,8 @@
 import { motion } from 'framer-motion'
 import type { ReactNode } from 'react'
 import type { Explanation, LogEntry, ReplanTrace } from '../../types'
-import { describeTrigger } from '../../labels'
+import { WORK_NAME, describeTrigger } from '../../labels'
+import { clock } from '../../theme'
 import { ArrowRightIcon } from '../Icons'
 
 type AgentKind = 'human' | 'sensor' | 'llm' | 'search' | 'code' | 'rules'
@@ -48,6 +49,7 @@ function buildStages(entry: LogEntry, trace: ReplanTrace, explanation?: Explanat
   const checks = entry.data.invariants?.checked.length ?? 0
   const isAccepted = trace.verify.accepted
   const isTelemetry = trigger.source === 'telemetry' || trigger.source === 'surprise'
+  const holds = trace.agronomy?.holds ?? []
   const closed = trace.navigate.roads_closed
   const changed = trace.dispatch.jobs_changed
   return [
@@ -55,6 +57,12 @@ function buildStages(entry: LogEntry, trace: ReplanTrace, explanation?: Explanat
       name: 'Intake', kind: isTelemetry ? 'sensor' : 'human', role: 'Turns a report into a typed event',
       result: describeTrigger(trigger), meta: describeSource(trigger), tone: 'ok',
       limit: isTelemetry ? 'A validated report is acted on at once. Nobody has to click.' : 'Chat can only propose. A human confirms.',
+    },
+    {
+      name: 'Agronomy Agent', kind: 'rules', role: 'Decides which work the weather and the field allow',
+      result: holds.length ? holds.map((h) => `No ${WORK_NAME[h.job_type]} until ${clock(h.until)}`).join(', ') : 'No holds, all work may go ahead',
+      meta: holds.length ? 'held jobs wait, the rest go on' : 'conditions checked', tone: holds.length ? 'bad' : 'ok',
+      limit: 'A held job cannot be worked, whoever asks.',
     },
     {
       name: 'Navigation Agent', kind: 'code', role: 'Plans routes and travel times between fields',
@@ -93,12 +101,12 @@ interface PipelineProps {
 export function Pipeline({ entry, trace, explanation }: PipelineProps) {
   const stages = buildStages(entry, trace, explanation)
   return (
-    <ol className="grid gap-2 md:grid-cols-5" aria-label="Agent pipeline">
+    <ol className="grid gap-2 md:grid-cols-3 min-[1800px]:grid-cols-6" aria-label="Agent pipeline">
       {stages.map((s, i) => (
         <motion.li key={`${entry.index}-${s.name}`} className="panel relative flex flex-col p-3"
           initial={{ opacity: 0.2, y: 8 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * STEP_DELAY_S }}>
           {i > 0 && (
-            <span className="absolute -left-[13px] top-7 z-10 hidden h-[18px] w-[18px] place-items-center rounded-full bg-soil-700 text-white/60 md:grid">
+            <span className="absolute -left-[13px] top-7 z-10 hidden h-[18px] w-[18px] place-items-center rounded-full bg-soil-700 text-white/60 min-[1800px]:grid">
               <ArrowRightIcon size={11} />
             </span>
           )}

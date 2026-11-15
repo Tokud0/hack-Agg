@@ -8,6 +8,7 @@ const STATUS_PILL: Record<string, { label: string; cls: string }> = {
   traveling: { label: 'Driving', cls: 'bg-sky-400/15 text-sky-300' },
   working: { label: 'Working', cls: 'bg-leaf/15 text-leaf' },
   refueling: { label: 'Refuelling', cls: 'bg-wheat/20 text-wheat' },
+  waiting: { label: 'Held by weather', cls: 'bg-[#b9e37a]/15 text-[#b9e37a]' },
   broken: { label: 'Broken down', cls: 'bg-alarm/20 text-alarm' },
 }
 

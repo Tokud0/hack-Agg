@@ -128,7 +128,7 @@ def start_context(tractor: Tractor, world: World, network: RoadNetwork) -> Start
         )
         return StartContext(
             node=job.field_id,
-            time=world.time + leg_travel + refuel_wait + from_depot + work,
+            time=max(world.time + leg_travel + refuel_wait + from_depot, job.not_before) + work,
             fuel=fuel,
             committed_travel=leg_travel + from_depot,
         )
@@ -136,7 +136,7 @@ def start_context(tractor: Tractor, world: World, network: RoadNetwork) -> Start
     fuel = tractor.fuel - leg_travel * tractor.fuel_per_travel_hour - work * tractor.fuel_per_work_hour
     return StartContext(
         node=job.field_id,
-        time=world.time + leg_travel + work,
+        time=max(world.time + leg_travel, job.not_before) + work,
         fuel=fuel,
         committed_travel=leg_travel,
     )
@@ -178,9 +178,12 @@ def evaluate_queue(
         if leg.refuel:
             refuel_start = time + leg.to_depot_hours
             refuel_stops[job_id] = (refuel_start, refuel_start + refuel_wait)
-        finish = time + leg.travel_hours + refuel_wait + job.remaining_hours
+        arrival = time + leg.travel_hours + refuel_wait
+        finish = max(arrival, job.not_before) + job.remaining_hours
         if finish > job.deadline + EPS:
             via = " (incl. refuel stop)" if leg.refuel else ""
+            if job.not_before > arrival + EPS:
+                via += f" (held by the weather until {clock_time(job.not_before)})"
             return fail(
                 f"{tractor.id} would finish {job.id} at {clock_time(finish)}{via}, deadline {clock_time(job.deadline)}",
                 job_id,

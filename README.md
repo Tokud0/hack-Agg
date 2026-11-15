@@ -26,6 +26,7 @@ Without an API key everything still works: explanations come from templates, and
 
 Six pages, one top bar (run, clock, speed) and one side panel that stay in place; the menu button in the top bar hides the page menu to give the map more room:
 
+- **What happened, in plain sight** (Live): every event raises a notice over the map with what happened and what it did to the plan ("2 jobs moved to another tractor, 1 can no longer be done"), and stays in a *What happened* strip above the map for the rest of the shift.
 - **Live**: the coordinator's map (fields fill in as they are worked, fuel rings, planned routes, hand-over arrows after a breakdown), live counters with the lead over the baseline, and a card per tractor with a *Simulate breakdown* button.
 - **Agents**: the orchestration pipeline, replayable for every re-plan of the shift (see below).
 - **Schedule**: Gantt by tractor (deadlines and events marked) and the full job table, for the coordinator or either baseline. Every planned job shows when it will finish and its spare time; a job the plan finishes less than 30 minutes before its deadline is marked **at risk** while it can still be saved (filter *At risk*, a dot on its chip, and a warning from the Fleet Agent in the plan summary).
@@ -34,7 +35,8 @@ Six pages, one top bar (run, clock, speed) and one side panel that stay in place
 - **Log**: every event, re-plan and finished job, with event-log export.
 - **Scenario**: build your own shift. Describe it in plain words (the LLM turns the text into tractors, fields and jobs; offline, the counts in the text are used), roll a random one, or place fields on the map by clicking and dragging and edit tractors and jobs in lists. *Random shift* in the top bar starts a new random shift in one click.
   - **Finishable at the start**: a generated shift is checked against the coordinator's own opening plan (`fleet/generate.py`), and deadlines are moved until every job can be done if nothing goes wrong. For a hand-built shift, *Start this shift* runs the same check, lists the jobs that cannot be done and why, and offers *Fix it for me*, *Start anyway* or *Keep editing*.
-  - **Surprise events**: a random shift arms a breakdown, a closed road and a priority change at random moments. They fire on the clock with nobody clicking, the fleet re-plans, and the trace marks them as having happened by themselves. The top bar shows how many are still ahead, not what or when. A hand-built shift can switch them on with one checkbox.
+  - **How much goes wrong** is a choice: *Calm* (nothing by itself), *Some trouble* (one or two events; a breakdown on about one shift in four) or *Rough day* (a breakdown, closed roads, a priority change and bad weather). The *Random* button in the top bar asks, and the Scenario page has the same switch for a hand-built shift.
+  - **Surprise events**: a random shift arms its events at random moments. They fire on the clock with nobody clicking, the fleet re-plans, and the trace marks them as having happened by themselves. The top bar shows how many are still ahead, not what or when. A hand-built shift can switch them on with one checkbox.
 - **Agents talking, live**: the *Radio* tab of the side panel opens in *Summary* mode: one card per plan with the explanation, the plan now, what changed and the Safety Agent's verdict; *Show the conversation* on a card, or the *All messages* switch, opens every message. In full it is a running feed of what the agents say to each other, and, in *All messages* mode only, the same message appears on the map as a speech bubble over the tractor that is speaking, with lines to whoever it addresses (in *Summary* mode the map stays clear). Status calls (started, finished, refuelling) arrive as the simulator reports them. A re-plan is decided in milliseconds, so its conversation is the recorded trace played back slowed down, and the feed says so.
 - **Side panel**: *Radio*, *Re-plan* (AI explanation and the 4 safety checks of the latest re-plan), *Copilot* chat, *Add jobs* (free text, form or scenario JSON), *Events* (apply a disruption or forecast it with what-if).
 - Click any job for **"why?"**: the score breakdown and every rejected alternative.
@@ -46,10 +48,11 @@ The orchestrator follows ATC's suggested architecture. Every event goes through 
 | # | Agent | Kind | Job | Limit |
 |---|-------|------|-----|-------|
 | 1 | Intake (Command Center) | LLM + human | Turns a chat message or a button press into a typed event | Can only propose; the operator confirms |
-| 2 | Navigation Agent | Deterministic code | Owns the road map: routes, detours around closed roads, travel times | Every bid uses its travel times |
-| 3 | Fleet Agent | Deterministic search | Runs an auction between the tractor agents, in 8 different calling orders, lets them trade, keeps the best result | Same input, same plan; no LLM inside |
-| 4 | Safety Agent | Hard rules | Checks the 4 invariants on the winning plan | Has a veto: a failed plan is discarded and the last valid plan stays |
-| 5 | Explainer | LLM | Tells the operator what changed and why | Reads the result; cannot change the plan |
+| 2 | Agronomy Agent | Hard rules | Decides which work the weather and the field allow: too windy to spray, too wet to mow | A held job cannot be worked before the hold ends, whoever asks |
+| 3 | Navigation Agent | Deterministic code | Owns the road map: routes, detours around closed roads, travel times | Every bid uses its travel times |
+| 4 | Fleet Agent | Deterministic search | Runs an auction between the tractor agents, in 8 different calling orders, lets them trade, keeps the best result | Same input, same plan; no LLM inside |
+| 5 | Safety Agent | Hard rules | Checks the 4 invariants on the winning plan | Has a veto: a failed plan is discarded and the last valid plan stays |
+| 6 | Explainer | LLM | Tells the operator what changed and why | Reads the result; cannot change the plan |
 
 ### One agent per tractor, and how they talk
 
@@ -62,13 +65,15 @@ Inside the Fleet Agent's step every tractor has its own agent (`backend/fleet/ag
 
 What this is and is not: the Fleet Agent is one deterministic search, not a set of separate processes. The tractor agents' messages are a **recorded trace** of that search, written down by an observer while the search runs (`agents.Recorder`), not an LLM dialogue and not a story told afterwards. A test rebuilds the final plan from the claims and trades alone, another checks every award went to the lowest bid, and switching the recorder off changes neither the plan nor the benchmark. The LLM takes no decisions here; on the Agents page you can pick one tractor and ask its agent a question, and the LLM answers in first person from what that agent said and heard in the round you selected (`POST /api/agents/{id}/ask`).
 
+**Weather (Agronomy Agent)**: a weather event rules out one kind of work for a time (Events tab, *Weather turns*; random shifts include one). Every unfinished job of that kind gets a "not before" time that the planner, the simulator and both baselines share (`replan.hold_for_weather`, `Job.not_before`). Work already under way stops, keeps its progress and resumes when the hold ends; its tractor stands by at the field and burns no fuel. The Fleet Agent plans around the hold, so the other kind of work goes on. The weather is scripted in the simulation; it is not a forecast.
+
 **Recovery without a click**: besides the operator's buttons and the chat, a fault can arrive on its own, as tractor telemetry would report it (Events tab, *Hands-off test*, or `POST /api/events/schedule`). It fires on the simulation clock, the fleet re-plans and the trace marks the event as raised by the tractor itself.
 
 The **Agents** page shows this for any re-plan: the full conversation (filter by agent), what triggered it and who raised it, every auction round with its score before and after trading, the checks, who got which job, the explanation, and the time each step took. *Test the Safety Agent* hands it a deliberately corrupted copy of the live plan (`POST /api/orchestration/fault-test`) and shows the veto; the live plan is not touched.
 
 ```bash
 cd backend
-.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 174 tests
+.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 245 tests
 .venv/bin/python -m scripts.benchmark --n 50       # coordinator vs baseline table
 .venv/bin/python -m scripts.export_demo            # writes results/
 ```

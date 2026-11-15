@@ -49,6 +49,7 @@ const STATUS_TEXT: Record<string, (job: string) => string> = {
   job_done: (job) => `Finished ${job}.`,
   refuel_started: (job) => `Refuelling at the depot before ${job}.`,
   refueled: (job) => `Tank is full, heading to ${job}.`,
+  weather_hold: (job) => `Standing by at the field: the weather does not allow ${job} yet.`,
 }
 
 /** What one log entry sounds like on the radio. */

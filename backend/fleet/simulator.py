@@ -151,11 +151,19 @@ def _advance(
                 t = _start_refuel(t, world, world.time + dt - budget)
                 events.append(SimEvent(world.time + dt - budget, "refuel_started", t.id, t.current_job))
                 continue
-            if t.status == TractorStatus.WORKING:
+            if t.status == TractorStatus.WORKING and jobs[t.current_job].not_before <= world.time + dt - budget + EPS:
                 jobs[t.current_job] = replace(jobs[t.current_job], status=JobStatus.IN_PROGRESS, tractor_id=t.id)
                 events.append(SimEvent(world.time + dt - budget, "job_started", t.id, t.current_job))
             continue
         job_id = t.current_job
+        held_for = jobs[job_id].not_before - now
+        if held_for > EPS:
+            # The weather does not allow this work yet: stand by at the field, burning nothing.
+            if t.status != TractorStatus.WAITING:
+                events.append(SimEvent(now, "weather_hold", t.id, job_id))
+            t = replace(t, status=TractorStatus.WAITING)
+            budget -= min(budget, held_for)
+            continue
         if jobs[job_id].status != JobStatus.IN_PROGRESS:
             events.append(SimEvent(now, "job_started", t.id, job_id))
         t, jobs[job_id], budget = _work(t, jobs[job_id], budget, now)

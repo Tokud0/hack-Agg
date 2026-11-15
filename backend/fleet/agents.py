@@ -27,13 +27,15 @@ from .coordinator import (
     _queue_cost,
 )
 from .models import TractorStatus, World
-from .replan import ReplanResult
+from .replan import WORK_NAME, ReplanResult, weather_holds
 from .risk import JobOutlook, at_risk
 from .routing import RoadNetwork
 
 FLEET_AGENT = "fleet_agent"
 NAVIGATION_AGENT = "navigation_agent"
 SAFETY_AGENT = "safety_agent"
+AGRONOMY_AGENT = "agronomy_agent"
+WEATHER_CAUSE = {"spray": "The wind is too strong to spray", "mow": "The ground is too wet to mow"}
 EVERYONE = "all"
 SHIFT_START_HOUR = 6.0
 AWARD_REASON: dict[str, str] = {"cheapest": "lowest added cost", "soonest": "soonest finish"}
@@ -100,6 +102,15 @@ def _road_map_message(world: World) -> Message:
                    data={"roads_closed": closed})
 
 
+def _conditions_message(world: World) -> Message:
+    holds = weather_holds(world)
+    if not holds:
+        text = "Field conditions: no holds. All work may go ahead."
+    else:
+        text = "Field conditions: " + "; ".join(f"{WORK_NAME[h['job_type']]} on hold until {clock(h['until'])}" for h in holds) + "."
+    return Message(AGRONOMY_AGENT, EVERYONE, "status", "situation", text, data={"holds": holds})
+
+
 def _trigger_messages(world: World, network: RoadNetwork, trigger: dict, released: dict[str, str]) -> list[Message]:
     kind = trigger.get("type")
     if kind == "initial_plan":
@@ -112,6 +123,17 @@ def _trigger_messages(world: World, network: RoadNetwork, trigger: dict, release
             Message(tid, EVERYONE, "alert", "situation", f"I have broken down near {world.tractors[tid].node}. {gave_up}",
                     data={"released": sorted(released)}),
             Message(FLEET_AGENT, EVERYONE, "note", "situation", f"{tid} is out. Re-opening the auction for all open work. Report your status."),
+        ]
+    if kind == "weather":
+        job_type = str(trigger["job_type"])
+        held = sorted(j.id for j in world.jobs.values() if j.type == job_type and j.status.value != "done")
+        other = WORK_NAME["mow" if job_type == "spray" else "spray"].capitalize()
+        waiting = f"{_jobs(held)} wait" if held else "No open job is affected"
+        return [
+            Message(AGRONOMY_AGENT, EVERYONE, "alert", "situation",
+                    f"{WEATHER_CAUSE[job_type]}. {WORK_NAME[job_type].capitalize()} is on hold until {clock(float(trigger['until']))}. "
+                    f"{waiting}. {other} is not affected.", data={"job_type": job_type, "until": trigger["until"], "held": held}),
+            Message(FLEET_AGENT, EVERYONE, "note", "situation", "Re-opening the auction around the hold. Report your status."),
         ]
     if kind == "block_road":
         a, b = str(trigger["a"]), str(trigger["b"])
@@ -135,6 +157,8 @@ def _status_message(world: World, tractor_id: str) -> Message:
     job = world.jobs.get(t.current_job) if t.current_job else None
     if job is None:
         doing = "Free now."
+    elif t.status == TractorStatus.WAITING or (t.status == TractorStatus.WORKING and job.not_before > world.time):
+        doing = f"Standing by at {job.field_id}: the weather holds {job.id} until {clock(job.not_before)}. I keep it."
     elif t.status == TractorStatus.WORKING:
         doing = f"Working on {job.id} ({job.progress:.0%} done). I keep it."
     else:
@@ -147,6 +171,7 @@ def situation(world: World, network: RoadNetwork, trigger: dict, released: dict[
     working = [tid for tid in sorted(world.tractors) if world.tractors[tid].status != TractorStatus.BROKEN]
     return [
         *_trigger_messages(world, network, trigger, released),
+        _conditions_message(world),
         _road_map_message(world),
         *(_status_message(world, tid) for tid in working),
     ]
@@ -282,10 +307,14 @@ def negotiation(result: ReplanResult) -> list[Message]:
 
 
 def _risk_message(o: JobOutlook) -> Message:
-    spare = max(0, round(o.slack * 60))
-    return Message(FLEET_AGENT, EVERYONE, "risk", "approval", topic=o.job_id,
-                   text=f"Watch {o.job_id}: {o.tractor_id} finishes it at {clock(o.finish)}, only {spare} min before its "
-                        f"{clock(o.deadline)} deadline. One more delay and it is lost.",
+    minutes = abs(round(o.slack * 60))
+    if o.slack < 0:  # work already under way that a hold or a detour has pushed past its deadline
+        text = (f"{o.job_id} will be late: {o.tractor_id} finishes it at {clock(o.finish)}, {minutes} min after its "
+                f"{clock(o.deadline)} deadline. It is already under way, so it is finished anyway.")
+    else:
+        text = (f"Watch {o.job_id}: {o.tractor_id} finishes it at {clock(o.finish)}, only {minutes} min before its "
+                f"{clock(o.deadline)} deadline. One more delay and it is lost.")
+    return Message(FLEET_AGENT, EVERYONE, "risk", "approval", topic=o.job_id, text=text,
                    data={"finish": round(o.finish, 2), "deadline": o.deadline, "slack": round(o.slack, 2)})
 
 

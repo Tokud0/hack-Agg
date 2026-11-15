@@ -7,6 +7,7 @@ time, on the plan the coordinator itself makes. Surprise events then make it har
 from __future__ import annotations
 
 import random
+from typing import Literal
 
 from .coordinator import plan
 from .models import JOB_TYPE_TO_IMPLEMENT
@@ -69,30 +70,66 @@ def make_feasible(scenario: ScenarioIn) -> tuple[ScenarioIn, list[str]]:
     return current, [*moved, *(f"{jid} removed: {why}" for jid, why in sorted(removed.items()))]
 
 
-def random_events(scenario: ScenarioIn, seed: int) -> list[EventIn]:
-    """One of each kind of trouble the coordinator handles, at random moments of the shift."""
+Trouble = Literal["none", "low", "high"]
+# Chance of each kind of event on a quiet shift. A rough shift gets every kind, and a second closed road.
+LOW_TROUBLE_CHANCE = {"breakdown": 0.25, "block_road": 0.45, "change_priority": 0.5, "weather": 0.35}
+
+
+def random_events(scenario: ScenarioIn, seed: int, trouble: Trouble = "low") -> list[EventIn]:
+    """Trouble for a shift, at random moments: breakdowns, closed roads, priority changes, weather.
+
+    "low" rolls for each kind (a breakdown on about one shift in four) and always yields at least one
+    event; "high" brings every kind. The last working tractor is never taken out.
+    """
+    if trouble == "none":
+        return []
     rng = random.Random(seed)
+    is_rough = trouble == "high"
+
+    def happens(kind: str) -> bool:
+        return rng.random() < (1.0 if is_rough else LOW_TROUBLE_CHANCE[kind])
 
     def moment() -> float:
         return round(rng.uniform(FIRST_SURPRISE_HOUR, LAST_SURPRISE_HOUR), 1)
 
     events: list[EventIn] = []
-    if len(scenario.tractors) >= 2:  # never take the only tractor out
+    if len(scenario.tractors) >= 2 and happens("breakdown"):
         events.append(EventIn(at=moment(), type="breakdown", tractor_id=rng.choice(scenario.tractors).id, source=SURPRISE))
     nodes = [scenario.depot.id, *(f.id for f in scenario.fields)]
-    if len(nodes) >= 3:  # closing the only road would cut the farm in two
-        a, b = rng.sample(nodes, 2)
-        events.append(EventIn(at=moment(), type="block_road", a=a, b=b, source=SURPRISE))
+    for _ in range(2 if is_rough else 1):
+        if len(nodes) >= 3 and happens("block_road"):  # closing the only road would cut the farm in two
+            a, b = rng.sample(nodes, 2)
+            events.append(EventIn(at=moment(), type="block_road", a=a, b=b, source=SURPRISE))
     job = rng.choice(scenario.jobs)
-    events.append(EventIn(at=moment(), type="change_priority", job_id=job.id, priority=3 if job.priority == 1 else 1, source=SURPRISE))
-    return sorted(events, key=lambda e: e.at)
+    priority_change = EventIn(at=moment(), type="change_priority", job_id=job.id, priority=3 if job.priority == 1 else 1, source=SURPRISE)
+    if happens("change_priority"):
+        events.append(priority_change)
+    if happens("weather"):
+        held = rng.choice(sorted({j.type for j in scenario.jobs}))
+        events.append(EventIn(at=moment(), type="weather", job_type=held, hours=rng.choice([1.0, 1.5, 2.0]), source=SURPRISE))
+    return sorted(events or [priority_change], key=lambda e: e.at)
 
 
-def with_surprises(scenario: ScenarioIn, seed: int) -> ScenarioIn:
-    return scenario.model_copy(update={"demo_events": random_events(scenario, seed), "auto_events": True})
+def with_surprises(scenario: ScenarioIn, seed: int, trouble: Trouble | None = None) -> ScenarioIn:
+    """Arm generated events on a scenario. `trouble` defaults to the scenario's own setting."""
+    level = trouble or scenario.trouble
+    if level == "none":
+        return scenario.model_copy(update={"demo_events": [], "auto_events": False})
+    return scenario.model_copy(update={"demo_events": random_events(scenario, seed, level), "auto_events": True, "trouble": level})
 
 
-def random_shift(seed: int, n_tractors: int | None = None, n_fields: int | None = None, n_jobs: int | None = None) -> ScenarioIn:
-    """A random shift that can be finished as planned at 06:00, with surprise events armed."""
+def without_empty_fields(scenario: ScenarioIn) -> ScenarioIn:
+    """Drop fields that have no job (they would sit on the map with nothing to do) and renumber the rest."""
+    used = [f for f in scenario.fields if any(j.field_id == f.id for j in scenario.jobs)]
+    renamed = {f.id: f"F{i + 1}" for i, f in enumerate(used)}
+    fields = [f.model_copy(update={"id": renamed[f.id]}) for f in used]
+    jobs = [j.model_copy(update={"field_id": renamed[j.field_id]}) for j in scenario.jobs]
+    return scenario.model_copy(update={"fields": fields, "jobs": jobs, "demo_events": []})
+
+
+def random_shift(
+    seed: int, n_tractors: int | None = None, n_fields: int | None = None, n_jobs: int | None = None, trouble: Trouble = "low"
+) -> ScenarioIn:
+    """A random shift that can be finished as planned at 06:00, every field with work on it, with events armed."""
     scenario, _ = make_feasible(random_live_scenario(seed, n_tractors, n_fields, n_jobs))
-    return with_surprises(scenario, seed)
+    return with_surprises(without_empty_fields(scenario), seed, trouble)

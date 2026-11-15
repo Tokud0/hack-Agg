@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useState } from 'react'
+import { EventBanner, EventTimeline } from '../components/EventFeed'
 import { FieldMap, MapLegend, type Handoff } from '../components/FieldMap'
 import { FleetStrip } from '../components/FleetStrip'
 import { CloseIcon } from '../components/Icons'
@@ -7,6 +8,7 @@ import { JobChips, JobChipsLegend } from '../components/JobChips'
 import { Counters } from '../components/Panels'
 import { ViewHeader } from '../components/shell/ViewHeader'
 import type { Speech } from '../radio'
+import { shiftEvents } from '../shiftEvents'
 import { BASELINES, type BaselineKind } from '../strategies'
 import type { MapInfo, Metrics, RunSnapshot } from '../types'
 
@@ -49,15 +51,19 @@ interface LiveViewProps {
 
 export function LiveView({ run, map, baselineKind, baselineMetrics, highlight, handoffs, lastWords, speech, onBreak, onSelectJob }: LiveViewProps) {
   const [showGuide, setShowGuide] = useState(true)
+  const events = shiftEvents(run.log)
   return (
     <div className="flex h-full flex-col gap-3">
       <ViewHeader title="Live" description="Where every tractor is right now and what it does next."
         actions={<span className="text-[11px] text-white/40">green / red badges: difference vs {BASELINES[baselineKind].label}</span>} />
-      <AnimatePresence>{showGuide && <Guide onClose={() => setShowGuide(false)} />}</AnimatePresence>
+      {/* The guide is for the moment before the shift starts; once it runs, the map gets the room. */}
+      <AnimatePresence>{showGuide && run.time === 0 && <Guide onClose={() => setShowGuide(false)} />}</AnimatePresence>
       <Counters metrics={run.metrics} accent={COORDINATOR_ACCENT} compareTo={baselineMetrics} />
       <JobChips jobs={run.jobs} onSelectJob={onSelectJob} />
+      <EventTimeline events={events} />
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
-        <section className="panel flex min-h-[420px] flex-col p-3" aria-label="Field map">
+        <section className="panel relative flex min-h-[420px] flex-col p-3" aria-label="Field map">
+          <EventBanner events={events} />
           <div className="min-h-0 flex-1">
             <FieldMap run={run} map={map} highlight={highlight} handoffs={handoffs} onSelectJob={onSelectJob} speech={speech} />
           </div>

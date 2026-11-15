@@ -28,7 +28,7 @@ def _drop_hopeless(world: World) -> World:
             continue
         if job.implement not in capable:
             jobs[jid] = replace(job, status=JobStatus.UNASSIGNABLE, reason=f"no working {job.implement.value}")
-        elif world.time + job.remaining_hours > job.deadline:
+        elif max(world.time, job.not_before) + job.remaining_hours > job.deadline:
             jobs[jid] = replace(job, status=JobStatus.UNASSIGNABLE, reason="missed deadline")
     return replace(world, jobs=jobs)
 

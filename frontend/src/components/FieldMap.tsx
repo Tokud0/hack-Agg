@@ -104,6 +104,7 @@ function FieldTile({ uid, id, x, y, jobs, highlighted, onSelect }: FieldTileProp
       <rect x={left} y={top} width={FIELD_SIZE} height={FIELD_SIZE} rx={0.25} fill="none" stroke={isLost ? '#ff5d5d' : '#3a5243'}
         strokeWidth={isLost ? 0.07 : 0.04} strokeDasharray={isLost ? '0.15 0.1' : undefined} />
       <text x={left + 0.1} y={top + 0.32} fontSize={0.27} fill="#cfe0d4" fontWeight={700}>{id}</text>
+      {jobs.length === 0 && <text x={x} y={sy(y) + 0.2} fontSize={0.22} fill="#ffffff55" textAnchor="middle">no work today</text>}
       {jobs.map((j, i) => {
         const cx = left + i * strip + strip / 2
         const isDone = j.status === 'done'

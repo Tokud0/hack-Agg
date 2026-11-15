@@ -7,6 +7,7 @@ export const AGENT: Record<string, { name: string; short: string; color: string 
   fleet_agent: { name: 'Fleet Agent', short: 'F', color: '#7bd88f' },
   navigation_agent: { name: 'Navigation Agent', short: 'N', color: '#f5a3c7' },
   safety_agent: { name: 'Safety Agent', short: 'S', color: '#7dd3fc' },
+  agronomy_agent: { name: 'Agronomy Agent', short: 'A', color: '#b9e37a' },
   explainer: { name: 'Explainer', short: 'E', color: '#f2c46d' },
   operator: { name: 'operator', short: '', color: '#9aa79e' },
   all: { name: 'everyone', short: '', color: '#9aa79e' },

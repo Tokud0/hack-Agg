@@ -33,6 +33,8 @@ class TractorStatus(str, Enum):
     TRAVELING = "traveling"
     WORKING = "working"
     REFUELING = "refueling"
+    # At the field, held back by the weather until its job may start.
+    WAITING = "waiting"
     BROKEN = "broken"
 
 
@@ -59,6 +61,8 @@ class Job:
     # Start of the current work segment; closed segments are (tractor, start, end).
     started_at: float | None = None
     segments: tuple[tuple[str, float, float], ...] = ()
+    # Weather hold: no work on this job before this time (hours since shift start).
+    not_before: float = 0.0
 
     @property
     def implement(self) -> Implement:

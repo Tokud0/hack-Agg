@@ -158,9 +158,9 @@ export default function App() {
         onTogglePlay={() => act(() => api.control(session.running ? 'pause' : 'play'))}
         onSpeed={(s) => act(() => api.control('speed', s))}
         onReset={() => act(() => api.control('reset'))}
-        onRandom={() => act(async () => api.uploadScenario(await api.randomScenario()))}
+        onRandom={(trouble) => act(async () => api.uploadScenario(await api.randomScenario(trouble)))}
         surprisesLeft={session.surprises_left ?? 0}
-        isNavOpen={isNavOpen} onToggleNav={toggleNav} onBriefing={() => setShowBriefing(true)} />
+        isNavOpen={isNavOpen} onToggleNav={toggleNav} onBriefing={() => setShowBriefing(true)} weatherHolds={session.weather_holds ?? []} />
 
       <div className="flex flex-1 flex-col xl:min-h-0 xl:flex-row">
         {isNavOpen && <NavRail view={page} onNavigate={navigate} />}

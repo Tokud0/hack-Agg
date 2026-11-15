@@ -456,9 +456,10 @@ def test_random_shift_can_be_finished_as_planned_at_the_start(seed):
 
 @pytest.mark.parametrize("seed", range(30))
 def test_random_shift_survives_its_surprises_without_violations(seed):
-    scenario = random_shift(seed)
+    scenario = random_shift(seed, trouble="high")
     kinds = {e.type for e in scenario.demo_events}
-    assert scenario.auto_events and "change_priority" in kinds and all(e.source == "surprise" for e in scenario.demo_events)
+    assert scenario.auto_events and {"change_priority", "weather", "block_road"} <= kinds
+    assert all(e.source == "surprise" for e in scenario.demo_events)
     run = run_to_end(start(scenario, "coordinator"))
     assert not run.pending_events and metrics(run)["invariant_violations"] == 0
     assert all(t.status != TractorStatus.BROKEN for t in run.world.tractors.values()) is ("breakdown" not in kinds)
@@ -505,3 +506,79 @@ def test_job_with_little_spare_time_is_flagged_and_announced(world):
     risky = [o.job_id for o in at_risk(result.world, network)]
     messages = transcript(squeezed, network, {"type": "initial_plan"}, {}, result)
     assert risky and {m.topic for m in messages if m.kind == "risk"} == set(risky)
+
+
+# --- weather holds -----------------------------------------------------------
+
+
+def _run_until(run, hour):
+    while run.world.time < hour - 1e-9:
+        run = tick(run, min(0.05, hour - run.world.time))
+    return run
+
+
+@pytest.mark.parametrize("strategy", ["coordinator", "baseline", "edf"])
+def test_no_spraying_happens_while_the_weather_holds_it(scenario, strategy):
+    run = apply_event(start(scenario, strategy, with_demo_events=False), EventIn(at=0, type="weather", job_type="spray", hours=2.0))
+    held = _run_until(run, 1.95)
+    assert all(j.progress == 0 for j in held.world.jobs.values() if j.type == "spray")
+    assert any(j.progress > 0 for j in held.world.jobs.values() if j.type == "mow")
+    done = run_to_end(held)
+    assert any(j.status == JobStatus.DONE for j in done.world.jobs.values() if j.type == "spray")
+    assert all(j.completed_at is None or j.completed_at >= 2.0 for j in done.world.jobs.values() if j.type == "spray")
+    assert metrics(done)["invariant_violations"] == 0
+
+
+def test_spraying_under_way_stops_keeps_its_progress_and_resumes(scenario):
+    run = _run_until(start(scenario, "coordinator", with_demo_events=False), 1.2)
+    spraying = next(j for j in run.world.jobs.values() if j.type == "spray" and j.status == JobStatus.IN_PROGRESS)
+    run = apply_event(run, EventIn(at=run.world.time, type="weather", job_type="spray", hours=1.0))
+    paused = _run_until(run, 2.0)
+    job = paused.world.jobs[spraying.id]
+    assert job.progress == pytest.approx(spraying.progress) and job.status == JobStatus.IN_PROGRESS
+    assert paused.world.tractors[spraying.tractor_id].status == TractorStatus.WAITING
+    finished = run_to_end(paused).world.jobs[spraying.id]
+    assert finished.status == JobStatus.DONE and finished.completed_at >= 2.2
+
+
+def test_standing_by_for_the_weather_burns_no_fuel(scenario):
+    run = apply_event(start(scenario, "coordinator", with_demo_events=False), EventIn(at=0, type="weather", job_type="spray", hours=3.0))
+    arrived = _run_until(run, 2.0)
+    waiting = [t for t in arrived.world.tractors.values() if t.status == TractorStatus.WAITING]
+    assert waiting
+    later = _run_until(arrived, 2.9)
+    assert all(later.world.tractors[t.id].fuel == pytest.approx(t.fuel) for t in waiting)
+
+
+def test_agronomy_agent_reports_conditions_in_every_round(world):
+    _, messages = _conversation(world)
+    assert any(m.sender == "agronomy_agent" and "no holds" in m.text for m in messages)
+
+
+# --- how much trouble a generated shift gets ---------------------------------
+
+
+def test_quiet_shifts_break_down_far_less_often_than_rough_ones():
+    def breakdowns(trouble):
+        return sum(any(e.type == "breakdown" for e in random_shift(seed, trouble=trouble).demo_events) for seed in range(60))
+
+    quiet, rough = breakdowns("low"), breakdowns("high")
+    assert quiet <= 25 and rough == 60  # about one quiet shift in four; every rough one
+
+
+@pytest.mark.parametrize("seed", range(20))
+def test_quiet_shift_still_has_something_happen(seed):
+    scenario = random_shift(seed, trouble="low")
+    assert scenario.auto_events and 1 <= len(scenario.demo_events) <= 4
+
+
+def test_calm_shift_has_no_events():
+    scenario = random_shift(3, trouble="none")
+    assert scenario.demo_events == [] and not scenario.auto_events
+
+
+@pytest.mark.parametrize("seed", range(40))
+def test_every_field_of_a_random_shift_has_work(seed):
+    scenario = random_shift(seed)
+    assert {f.id for f in scenario.fields} == {j.field_id for j in scenario.jobs}
+    assert [f.id for f in scenario.fields] == [f"F{i + 1}" for i in range(len(scenario.fields))]

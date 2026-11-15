@@ -51,7 +51,7 @@ export function JobTable({ jobs, highlight, onSelectJob }: JobTableProps) {
               <td className="font-mono text-white/60">{j.projected_finish === null ? '—' : clock(j.projected_finish)}</td>
               <td>{j.slack === null ? <span className="text-white/30">—</span> : (
                 <span className={`rounded px-1 font-mono text-[11px] ${j.at_risk ? 'bg-wheat/20 font-bold text-wheat' : 'text-white/60'}`}>
-                  {spareTime(j.slack)}{j.at_risk && ' · at risk'}
+                  {j.slack < 0 ? `${spareTime(-j.slack)} late` : `${spareTime(j.slack)}${j.at_risk ? ' · at risk' : ''}`}
                 </span>
               )}</td>
               <td className="pr-4">

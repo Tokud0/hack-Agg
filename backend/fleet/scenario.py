@@ -45,12 +45,16 @@ class JobIn(BaseModel):
 
 class EventIn(BaseModel):
     at: float = PField(ge=0)
-    type: Literal["breakdown", "block_road", "change_priority"]
+    type: Literal["breakdown", "block_road", "change_priority", "weather"]
     tractor_id: str | None = None
     a: str | None = None
     b: str | None = None
     job_id: str | None = None
     priority: int | None = None
+    # Weather: the kind of work it rules out, for `hours` from the moment it arrives (or until `until`).
+    job_type: Literal["spray", "mow"] | None = None
+    hours: float | None = PField(default=None, gt=0, le=12)
+    until: float | None = None
     # Who raised it: "operator" (button), "copilot" (LLM proposal the operator confirmed)
     # "telemetry" (a scheduled fault the tractor reports itself) or "surprise" (a generated
     # event of a random shift). Nobody clicks for the last two.
@@ -69,6 +73,8 @@ class ScenarioIn(BaseModel):
     demo_events: list[EventIn] = []
     # Live dashboard only: fire `demo_events` by themselves on the clock (generated ones if none are given).
     auto_events: bool = False
+    # How much goes wrong when events are generated: "low" is a mostly quiet shift, "high" a rough one.
+    trouble: Literal["low", "high"] = "low"
 
     @model_validator(mode="after")
     def _check_refs(self) -> "ScenarioIn":
@@ -90,6 +96,8 @@ class ScenarioIn(BaseModel):
                 raise ValueError(f"event references unknown road {event.a}–{event.b}")
             if event.type == "change_priority" and (event.job_id not in job_ids or event.priority not in (1, 2, 3)):
                 raise ValueError(f"event references unknown job {event.job_id} or a bad priority")
+            if event.type == "weather" and (event.job_type is None or (event.hours is None and event.until is None)):
+                raise ValueError("a weather event needs the kind of work it holds and for how long")
         return self
 
 

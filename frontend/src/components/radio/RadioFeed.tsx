@@ -24,7 +24,7 @@ interface RadioFeedProps {
 
 /** A status call worth a line in the summary: work finished or a stop at the depot. */
 const isMilestone = (item: RadioItem): boolean =>
-  item.message?.kind === 'status' && item.id.startsWith('log-') && /^(Finished|Refuelling)/.test(item.message.text)
+  item.message?.kind === 'status' && item.id.startsWith('log-') && /^(Finished|Refuelling|Standing by)/.test(item.message.text)
 
 function Milestone({ item }: { item: RadioItem }) {
   if (!item.message) return null

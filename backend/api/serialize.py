@@ -85,6 +85,7 @@ def snapshot(run: Run) -> dict:
                 "tractor_id": j.tractor_id,
                 "reason": j.reason,
                 "completed_at": j.completed_at,
+                "not_before": j.not_before,
                 # Where the plan stands for this job: when it will be finished and the spare time before its deadline.
                 "projected_finish": round(ahead[j.id].finish, 3) if j.id in ahead else None,
                 "slack": round(ahead[j.id].slack, 3) if j.id in ahead else None,

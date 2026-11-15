@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { Scenario } from './scenario'
+import type { Scenario, Trouble } from './scenario'
 import type { ShiftBriefing } from './types'
 import type { FaultTestResult, JobDraft, MapInfo, ProposedEvent, SessionView, WhatIfResult, WhyFacts } from './types'
 
@@ -41,7 +41,7 @@ export const api = {
     }),
   whatIf: (event: ProposedEvent) => request<WhatIfResult>('/api/whatif', { method: 'POST', body: JSON.stringify(event) }),
   currentScenario: () => request<Scenario>('/api/scenario'),
-  randomScenario: () => request<Scenario>('/api/scenario/random'),
+  randomScenario: (trouble: Trouble) => request<Scenario>(`/api/scenario/random?trouble=${trouble}`),
   describeScenario: (text: string) =>
     request<{ scenario: Scenario; source: string; changes: string[] }>('/api/scenario/describe', { method: 'POST', body: JSON.stringify({ text }) }),
   checkScenario: (scenario: Scenario) =>

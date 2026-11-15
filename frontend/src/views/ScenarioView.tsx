@@ -4,11 +4,11 @@ import { PlayIcon, ResetIcon, ShuffleIcon, SparkIcon } from '../components/Icons
 import { SourceBadge } from '../components/Panels'
 import { JobList, TractorList } from '../components/scenario/ScenarioLists'
 import { ScenarioMap } from '../components/scenario/ScenarioMap'
-import { ViewHeader } from '../components/shell/ViewHeader'
+import { Segmented, ViewHeader } from '../components/shell/ViewHeader'
 import { inputCls } from '../components/tools/shared'
 import {
-  EMPTY_SCENARIO, MAX_FIELDS, checkScenario, movedField, updatedJob, updatedTractor, withField, withJob, withTractor,
-  withoutField, withoutJob, withoutTractor, type Scenario,
+  EMPTY_SCENARIO, MAX_FIELDS, TROUBLE_LEVELS, checkScenario, movedField, updatedJob, updatedTractor, withField, withJob, withTractor,
+  troubleOf, withoutField, withoutJob, withoutTractor, type Scenario,
 } from '../scenario'
 
 const EXAMPLE = 'Two sprayers and one mower, 6 fields. Spray four of them, two are urgent and due by 10:00. Mow the other two by the afternoon.'
@@ -88,7 +88,7 @@ export function ScenarioView({ onStarted }: ScenarioViewProps) {
     <div className="flex h-full flex-col gap-3">
       <ViewHeader title="Scenario" description="Build your own shift: describe it, roll a random one, or place fields and jobs by hand."
         actions={<>
-          <button type="button" className={ghostButton} disabled={isBusy} onClick={() => load(async () => ({ scenario: await api.randomScenario() }), 'Random shift generated: every job can be done as it starts, and surprise events are armed. Change anything, then start it.')}><ShuffleIcon size={14} />Random</button>
+          <button type="button" className={ghostButton} disabled={isBusy} onClick={() => load(async () => ({ scenario: await api.randomScenario(troubleOf(scenario) === 'none' ? 'low' : troubleOf(scenario)) }), 'Random shift generated: every job can be done as it starts. Change anything, then start it.')}><ShuffleIcon size={14} />Random</button>
           <button type="button" className={ghostButton} disabled={isBusy} onClick={() => { setScenario(EMPTY_SCENARIO); setSelectedField(null); setNote(null) }}><ResetIcon size={14} />Clear</button>
           <button type="button" onClick={() => start(scenario, false)} disabled={isBusy || blockers.length > 0}
             className="flex items-center gap-1.5 rounded-lg bg-leaf px-4 py-1.5 text-xs font-extrabold text-black hover:brightness-110 disabled:opacity-40"><PlayIcon size={13} />Start this shift</button>
@@ -151,11 +151,16 @@ export function ScenarioView({ onStarted }: ScenarioViewProps) {
             <label htmlFor="scenario-name" className="text-xs font-bold uppercase tracking-widest text-white/60">Name</label>
             <input id="scenario-name" value={scenario.name} maxLength={60} onChange={(e) => setScenario((s) => ({ ...s, name: e.target.value }))} className={`${inputCls} mt-1 w-full`} />
           </div>
-          <label className="flex items-start gap-2 rounded-lg bg-black/20 px-2.5 py-2 text-[12px] text-white/75">
-            <input type="checkbox" className="mt-0.5 accent-[#7bd88f]" checked={scenario.auto_events ?? false}
-              onChange={(e) => edit((s) => ({ ...s, auto_events: e.target.checked }))} />
-            <span><b className="text-white">Surprise events.</b> A breakdown, a closed road and a priority change happen by themselves at random moments. Nobody clicks; the fleet has to recover on its own.</span>
-          </label>
+          <div className="rounded-lg bg-black/20 px-2.5 py-2">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <span className="text-xs font-bold uppercase tracking-widest text-white/60">What goes wrong by itself</span>
+              <Segmented label="Trouble during the shift" options={TROUBLE_LEVELS} value={troubleOf(scenario)}
+                onChange={(level) => edit((s) => ({ ...s, auto_events: level !== 'none', trouble: level === 'high' ? 'high' : 'low' }))} />
+            </div>
+            <p className="mt-1 text-[11.5px] leading-snug text-white/50">
+              {TROUBLE_LEVELS.find((t) => t.id === troubleOf(scenario))?.hint}. Events arrive at random moments with nobody clicking; the fleet has to recover on its own.
+            </p>
+          </div>
           <TractorList tractors={scenario.tractors} onAdd={() => edit(withTractor)}
             onUpdate={(id, patch) => edit((s) => updatedTractor(s, id, patch))} onRemove={(id) => edit((s) => withoutTractor(s, id))} />
           <JobList scenario={scenario} selectedField={selectedField} onAdd={(fieldId) => edit((s) => withJob(s, fieldId))}

@@ -8,8 +8,18 @@ from typing import Literal
 from . import agents, baseline
 from .coordinator import PRIORITY_WEIGHT
 from .diff import diff_plans
-from .models import Job, JobStatus, TractorStatus, World
-from .replan import block_road, break_tractor, change_priority, on_closed_stretch, replan, reroute_in_transit
+from .models import Job, JobStatus, TractorStatus, World, clock_time
+from .replan import (
+    WORK_NAME,
+    block_road,
+    break_tractor,
+    change_priority,
+    hold_for_weather,
+    on_closed_stretch,
+    replan,
+    reroute_in_transit,
+    weather_holds,
+)
 from .routing import RoadNetwork, build_network
 from .scenario import EventIn, ScenarioIn, to_world
 from .simulator import DEFAULT_DT, is_finished, step
@@ -72,6 +82,7 @@ def _replan_entry(run: Run, trigger: dict, released: dict[str, str]) -> Run:
                     "released": sorted(released),
                     "blocked_roads": len(run.world.blocked_roads),
                 },
+                "agronomy": {"holds": weather_holds(run.world)},
                 "navigate": {
                     "locations": len(run.world.node_ids()),
                     "roads_closed": sorted(sorted(road) for road in run.world.blocked_roads),
@@ -139,6 +150,11 @@ def apply_event(run: Run, event: EventIn) -> Run:
             return run
         world = change_priority(world, event.job_id, event.priority)
         message = f"{event.job_id} priority set to P{event.priority}"
+    elif event.type == "weather" and event.job_type:
+        until = event.until if event.until is not None else world.time + (event.hours or 0.0)
+        world = hold_for_weather(world, event.job_type, until)
+        trigger = {**trigger, "until": round(until, 2)}
+        message = f"Weather: no {WORK_NAME[event.job_type]} until {clock_time(until)}"
     else:
         raise ValueError(f"invalid event: {trigger}")
 
@@ -169,6 +185,7 @@ SIM_MESSAGES = {
     "job_done": "{t} finished {j}",
     "refuel_started": "{t} refuelling at the depot before {j}",
     "refueled": "{t} refuelled, heading to {j}",
+    "weather_hold": "{t} standing by at the field: the weather does not allow {j} yet",
 }
 
 

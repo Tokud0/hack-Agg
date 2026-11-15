@@ -1,6 +1,10 @@
 import { motion } from 'framer-motion'
+import { useState } from 'react'
+import { TROUBLE_LEVELS, type Trouble } from '../../scenario'
+import { WORK_NAME } from '../../labels'
 import { clock } from '../../theme'
-import { BoltIcon, MenuIcon, PauseIcon, PlayIcon, ResetIcon, ShuffleIcon, SparkIcon, TractorIcon } from '../Icons'
+import type { WeatherHold } from '../../types'
+import { AlertIcon, BoltIcon, MenuIcon, PauseIcon, PlayIcon, ResetIcon, ShuffleIcon, SparkIcon, TractorIcon } from '../Icons'
 
 const SHIFT_HOURS = 12
 
@@ -15,16 +19,18 @@ interface TopBarProps {
   onTogglePlay: () => void
   onSpeed: (speed: number) => void
   onReset: () => void
-  onRandom: () => void
+  onRandom: (trouble: Trouble) => void
   surprisesLeft: number
   isNavOpen: boolean
   onToggleNav: () => void
   onBriefing: () => void
+  weatherHolds: WeatherHold[]
 }
 
-export function TopBar({ scenario, time, isRunning, speed, speeds, provider, isConnected, onTogglePlay, onSpeed, onReset, onRandom, surprisesLeft, isNavOpen, onToggleNav, onBriefing }: TopBarProps) {
+export function TopBar({ scenario, time, isRunning, speed, speeds, provider, isConnected, onTogglePlay, onSpeed, onReset, onRandom, surprisesLeft, isNavOpen, onToggleNav, onBriefing, weatherHolds }: TopBarProps) {
   const shiftShare = Math.min(1, time / SHIFT_HOURS)
   const hasAi = provider !== 'offline'
+  const [isPicking, setIsPicking] = useState(false)
   return (
     <header className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2 border-b border-soil-700 bg-soil-900 px-4 py-2">
       <div className="flex items-center gap-2.5">
@@ -62,6 +68,11 @@ export function TopBar({ scenario, time, isRunning, speed, speeds, provider, isC
         </div>
       </div>
 
+      {weatherHolds.map((hold) => (
+        <span key={hold.job_type} className="flex items-center gap-1.5 rounded-full bg-[#b9e37a]/12 px-2.5 py-1 text-[11px] font-semibold text-[#b9e37a]" title="The Agronomy Agent holds this work until the weather allows it">
+          <AlertIcon size={11} />No {WORK_NAME[hold.job_type]} until {clock(hold.until)}
+        </span>
+      ))}
       {surprisesLeft > 0 && (
         <span className="flex items-center gap-1.5 rounded-full bg-alarm/12 px-2.5 py-1 text-[11px] font-semibold text-alarm" title="Breakdowns, closed roads and priority changes that will happen by themselves during this shift">
           <BoltIcon size={11} />{surprisesLeft} surprise event{surprisesLeft === 1 ? '' : 's'} ahead
@@ -77,10 +88,25 @@ export function TopBar({ scenario, time, isRunning, speed, speeds, provider, isC
         </span>
         <button type="button" onClick={onBriefing} title="The shift so far in a few sentences, and what needs your attention"
           className="flex items-center gap-1.5 rounded-lg bg-wheat/90 px-3 py-1.5 text-xs font-extrabold text-black hover:brightness-110"><SparkIcon size={13} />Briefing</button>
-        <button type="button" onClick={onRandom} title="Start a new shift with random fields, tractors and jobs"
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10 hover:text-white"><ShuffleIcon size={14} />Random shift</button>
-        <button type="button" onClick={onReset} title="Start the shift over"
-          className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10 hover:text-white"><ResetIcon size={14} />Restart shift</button>
+        <div className="relative">
+          <button type="button" onClick={() => setIsPicking((open) => !open)} aria-expanded={isPicking} aria-label="Random shift"
+            title="Start a new shift with random fields, tractors and jobs"
+            className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10 hover:text-white"><ShuffleIcon size={14} />Random</button>
+          {isPicking && (
+            <div role="menu" aria-label="How much should go wrong" className="absolute right-0 top-full z-50 mt-1.5 w-64 rounded-xl border border-soil-600 bg-soil-800 p-1.5 shadow-2xl">
+              <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white/45">New random shift</div>
+              {TROUBLE_LEVELS.map((level) => (
+                <button type="button" role="menuitem" key={level.id} onClick={() => { setIsPicking(false); onRandom(level.id) }}
+                  className="block w-full rounded-lg px-2 py-1.5 text-left hover:bg-white/10">
+                  <span className="block text-[12.5px] font-bold text-white">{level.label}</span>
+                  <span className="block text-[11px] leading-snug text-white/50">{level.hint}</span>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+        <button type="button" onClick={onReset} title="Start the shift over" aria-label="Restart shift"
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10 hover:text-white"><ResetIcon size={14} />Restart</button>
       </div>
     </header>
   )

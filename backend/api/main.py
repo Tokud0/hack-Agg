@@ -20,7 +20,7 @@ load_dotenv()
 from fleet.engine import log_as_dicts, metrics  # noqa: E402
 from fleet.scenario import EventIn, ScenarioIn  # noqa: E402
 from fleet.why import explain_assignment  # noqa: E402
-from fleet.generate import impossible_at_start, make_feasible, random_shift, with_surprises  # noqa: E402
+from fleet.generate import impossible_at_start, make_feasible, random_shift, with_surprises, without_empty_fields  # noqa: E402
 from llm.assistant import answer_why, ask_tractor, copilot, scenario_from_text, shift_briefing, llm_provider, narrate_what_if, parse_jobs  # noqa: E402
 from scripts.benchmark import run_benchmark  # noqa: E402
 
@@ -77,12 +77,14 @@ class ControlIn(BaseModel):
 
 
 class EventRequest(BaseModel):
-    type: Literal["breakdown", "block_road", "change_priority"]
+    type: Literal["breakdown", "block_road", "change_priority", "weather"]
     tractor_id: str | None = None
     a: str | None = None
     b: str | None = None
     job_id: str | None = None
     priority: int | None = Field(default=None, ge=1, le=3)
+    job_type: Literal["spray", "mow"] | None = None
+    hours: float | None = Field(default=None, gt=0, le=12)
     source: Literal["operator", "copilot"] = "operator"  # "telemetry" is set by the server only
 
 
@@ -231,9 +233,13 @@ def current_scenario() -> dict:
 
 
 @app.get("/api/scenario/random")
-def random_scenario_draft(seed: int | None = None) -> dict:
-    """A generated scenario to look at or edit. Nothing starts until it is posted to /api/scenario."""
-    return random_shift(seed if seed is not None else secrets.randbelow(100_000)).model_dump(mode="json")
+def random_scenario_draft(seed: int | None = None, trouble: Literal["none", "low", "high"] = "low") -> dict:
+    """A generated scenario to look at or edit. Nothing starts until it is posted to /api/scenario.
+
+    `trouble` sets how much goes wrong by itself: nothing, a mostly quiet shift, or a rough one.
+    """
+    chosen = seed if seed is not None else secrets.randbelow(100_000)
+    return random_shift(chosen, trouble=trouble).model_dump(mode="json")
 
 
 @app.post("/api/scenario/describe")
@@ -243,7 +249,10 @@ async def describe_scenario(body: ScenarioTextIn) -> dict:
         scenario, changes = await asyncio.to_thread(make_feasible, scenario)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
-    return {"scenario": scenario.model_dump(mode="json"), "source": source, "changes": changes}
+    dropped = len(scenario.fields) - len(without_empty_fields(scenario).fields)
+    if dropped:
+        changes = [*changes, f"{dropped} field{'s' if dropped != 1 else ''} with no job removed"]
+    return {"scenario": without_empty_fields(scenario).model_dump(mode="json"), "source": source, "changes": changes}
 
 
 @app.post("/api/scenario/check")

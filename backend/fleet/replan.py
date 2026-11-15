@@ -151,6 +151,30 @@ def reroute_in_transit(world: World, network: RoadNetwork) -> World:
     return replace(world, tractors=tractors)
 
 
+WORK_NAME = {"spray": "spraying", "mow": "mowing"}
+
+
+def hold_for_weather(world: World, job_type: str, until: float) -> World:
+    """The weather rules out one kind of work until `until`: no unfinished job of that kind may be worked before then.
+
+    Work already under way stops where it is and keeps its progress; its tractor stands by at the field.
+    """
+    jobs = {
+        jid: replace(job, not_before=max(job.not_before, until)) if job.type == job_type and job.status != JobStatus.DONE else job
+        for jid, job in world.jobs.items()
+    }
+    return replace(world, jobs=jobs)
+
+
+def weather_holds(world: World) -> list[dict]:
+    """Kinds of work currently held by the weather, with the time each hold ends."""
+    ends: dict[str, float] = {}
+    for job in world.jobs.values():
+        if job.status != JobStatus.DONE and job.not_before > world.time:
+            ends[job.type] = max(ends.get(job.type, 0.0), job.not_before)
+    return [{"job_type": job_type, "until": round(until, 2)} for job_type, until in sorted(ends.items())]
+
+
 def change_priority(world: World, job_id: str, priority: int) -> World:
     job = world.jobs[job_id]
     return replace(world, jobs={**world.jobs, job_id: replace(job, priority=priority)})

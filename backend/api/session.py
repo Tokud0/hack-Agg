@@ -14,7 +14,7 @@ from fleet.engine import Run
 from fleet.scenario import EventIn, ScenarioIn, load_scenario
 from fleet.generate import SURPRISE, clock
 from fleet.models import Job
-from fleet.replan import fault_test
+from fleet.replan import fault_test, weather_holds
 from fleet.risk import at_risk
 from fleet.whatif import forecast
 from llm.assistant import explain_replan
@@ -153,6 +153,7 @@ class Session:
             "scenario": self.scenario.name,
             "runs": {name: snapshot(run) for name, run in self.runs.items()},
             "explanations": {str(k): v for k, v in self.explanations.items()},
+            "weather_holds": weather_holds(self.runs["coordinator"].world),
             "scheduled_faults": [
                 {"tractor_id": e.tractor_id, "at": e.at} for e in pending if e.source != SURPRISE
             ],
@@ -180,7 +181,8 @@ class Session:
             *({"kind": "lost", "id": j.id, "text": f"{j.id} (P{j.priority}, {j.field_id}) cannot be done: {j.reason}"}
               for j in world.jobs.values() if j.status.value == "unassignable"),
             *({"kind": "at_risk", "id": o.job_id,
-               "text": f"{o.job_id} finishes at {clock(o.finish, start)}, {max(0, round(o.slack * 60))} min before its deadline"}
+               "text": f"{o.job_id} finishes at {clock(o.finish, start)}, {abs(round(o.slack * 60))} min "
+                       f"{'after' if o.slack < 0 else 'before'} its deadline"}
               for o in at_risk(world, run.network)),
             *({"kind": "low_fuel", "id": t.id, "text": f"{t.id} is at {t.fuel / t.fuel_capacity:.0%} fuel"}
               for t in world.tractors.values() if t.status.value != "broken" and t.fuel < LOW_FUEL_SHARE * t.fuel_capacity),
@@ -271,6 +273,9 @@ def _validate_event(run: Run, event: EventIn) -> None:
             raise ValueError("priority must be 1, 2 or 3")
         if world.jobs[event.job_id].status.value == "done":
             raise ValueError(f"{event.job_id} is already done")
+    elif event.type == "weather":
+        if event.job_type is None or event.hours is None:
+            raise ValueError("say which work the weather holds (spray or mow) and for how many hours")
 
 
 def _next_job_id(jobs: dict) -> str:

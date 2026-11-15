@@ -20,7 +20,10 @@ const KIND_LABEL: Record<Kind, string> = {
   breakdown: 'Tractor breaks down',
   block_road: 'Road closes',
   change_priority: 'Priority changes',
+  weather: 'Weather turns',
 }
+
+const HOLD_HOURS = [1, 2, 3]
 
 function CompareBar({ label, now, alt, max, higherIsBetter }: { label: string; now: number; alt: number; max: number; higherIsBetter: boolean }) {
   const worse = higherIsBetter ? alt < now : alt > now
@@ -81,6 +84,8 @@ export function EventsTool({ tractors, jobs, nodes, scheduledFaults }: EventsToo
   const [roadB, setRoadB] = useState(nodes[2] ?? '')
   const [jobId, setJobId] = useState(openJobs[0]?.id ?? '')
   const [priority, setPriority] = useState(1)
+  const [heldWork, setHeldWork] = useState<'spray' | 'mow'>('spray')
+  const [holdHours, setHoldHours] = useState(2)
   const [forecast, setForecast] = useState<WhatIfResult | null>(null)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
   const [isBusy, setIsBusy] = useState(false)
@@ -88,7 +93,8 @@ export function EventsTool({ tractors, jobs, nodes, scheduledFaults }: EventsToo
   const event: ProposedEvent =
     kind === 'breakdown' ? { type: kind, tractor_id: tractorId }
       : kind === 'block_road' ? { type: kind, a: roadA, b: roadB }
-        : { type: kind, job_id: jobId, priority }
+        : kind === 'weather' ? { type: kind, job_type: heldWork, hours: holdHours }
+          : { type: kind, job_id: jobId, priority }
 
   const runForecast = async () => {
     setIsBusy(true)
@@ -130,7 +136,7 @@ export function EventsTool({ tractors, jobs, nodes, scheduledFaults }: EventsToo
   return (
     <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto pr-1 text-[13px]">
       <p className="text-[12px] text-white/50">Pick a disruption. <b className="text-white/75">Forecast</b> simulates the rest of the shift without touching the live plan. <b className="text-white/75">Apply now</b> makes it happen.</p>
-      <div className="grid grid-cols-3 gap-1">
+      <div className="grid grid-cols-2 gap-1">
         {(Object.keys(KIND_LABEL) as Kind[]).map((k) => (
           <button type="button" key={k} onClick={() => { setKind(k); setForecast(null) }}
             className={`rounded-md px-2 py-1.5 text-[11.5px] font-semibold ${kind === k ? 'bg-white/15 text-white' : 'bg-white/5 text-white/50 hover:bg-white/10'}`}>
@@ -150,6 +156,18 @@ export function EventsTool({ tractors, jobs, nodes, scheduledFaults }: EventsToo
             <select aria-label="from" className={inputCls} value={roadA} onChange={(e) => setRoadA(e.target.value)}>{nodes.map((n) => <option key={n}>{n}</option>)}</select>
             <span className="text-white/40">to</span>
             <select aria-label="to" className={inputCls} value={roadB} onChange={(e) => setRoadB(e.target.value)}>{nodes.map((n) => <option key={n}>{n}</option>)}</select>
+          </>
+        )}
+        {kind === 'weather' && (
+          <>
+            <select aria-label="work the weather stops" className={inputCls} value={heldWork} onChange={(e) => setHeldWork(e.target.value as 'spray' | 'mow')}>
+              <option value="spray">Too windy to spray</option>
+              <option value="mow">Too wet to mow</option>
+            </select>
+            <span className="text-white/40">for</span>
+            <select aria-label="how long" className={inputCls} value={holdHours} onChange={(e) => setHoldHours(Number(e.target.value))}>
+              {HOLD_HOURS.map((h) => <option key={h} value={h}>{h} h</option>)}
+            </select>
           </>
         )}
         {kind === 'change_priority' && (

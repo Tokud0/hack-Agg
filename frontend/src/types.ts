@@ -1,4 +1,4 @@
-export type TractorStatus = 'idle' | 'traveling' | 'working' | 'refueling' | 'broken'
+export type TractorStatus = 'idle' | 'traveling' | 'working' | 'refueling' | 'waiting' | 'broken'
 export type JobStatus = 'pending' | 'assigned' | 'in_progress' | 'done' | 'unassignable'
 export type Strategy = 'baseline' | 'edf' | 'coordinator'
 
@@ -31,6 +31,8 @@ export interface Job {
   reason: string | null
   completed_at: number | null
   /** When the current plan finishes this job, and the spare time before its deadline; null when it is not planned. */
+  /** Weather hold: no work on this job before this time (hours since shift start); 0 when there is none. */
+  not_before: number
   projected_finish: number | null
   slack: number | null
   at_risk: boolean
@@ -78,9 +80,16 @@ export interface PlanCandidate {
   is_winner: boolean
 }
 
+/** A kind of work the weather rules out until a given time (hours since shift start). */
+export interface WeatherHold {
+  job_type: 'spray' | 'mow'
+  until: number
+}
+
 /** What each stage of the re-plan pipeline saw and produced. */
 export interface ReplanTrace {
   sense: { open_jobs: string[]; tractors_available: string[]; released: string[]; blocked_roads: number }
+  agronomy: { holds: WeatherHold[] }
   navigate: { locations: number; roads_closed: string[][] }
   plan: { duration_ms: number; score: number; candidates: PlanCandidate[] }
   verify: { duration_ms: number; accepted: boolean }
@@ -155,6 +164,7 @@ export interface SessionView {
   scheduled_faults: { tractor_id: string; at: number }[]
   /** Generated events of a random shift that have not happened yet. */
   surprises_left: number
+  weather_holds: WeatherHold[]
 }
 
 export interface MapInfo {
@@ -165,12 +175,15 @@ export interface MapInfo {
 }
 
 export interface ProposedEvent {
-  type: 'breakdown' | 'block_road' | 'change_priority'
+  type: 'breakdown' | 'block_road' | 'change_priority' | 'weather'
   tractor_id?: string
   a?: string
   b?: string
   job_id?: string
   priority?: number
+  /** Weather: the work it rules out and for how many hours from now. */
+  job_type?: 'spray' | 'mow'
+  hours?: number
   /** Who raised it; the copilot's proposals are tagged so the trace can show it. */
   source?: 'operator' | 'copilot' | 'telemetry'
 }

@@ -112,7 +112,7 @@ def test_replan_log_entry_carries_the_orchestration_trace(client):
     res = client.post("/api/events", json={"type": "breakdown", "tractor_id": "T1", "source": "copilot"})
     replan = res.json()["replan"]
     trace = replan["trace"]
-    assert set(trace) == {"sense", "navigate", "plan", "verify", "dispatch"}
+    assert set(trace) == {"sense", "agronomy", "navigate", "plan", "verify", "dispatch"}
     assert "T1" not in trace["sense"]["tractors_available"]
     assert sum(c["is_winner"] for c in trace["plan"]["candidates"]) == 1
     assert trace["verify"]["accepted"] is True
@@ -206,7 +206,7 @@ def test_invalid_scenario_is_rejected(client):
 
 
 def test_random_shift_arms_surprises_that_fire_without_a_click(client):
-    scenario = client.get("/api/scenario/random", params={"seed": 3}).json()
+    scenario = client.get("/api/scenario/random", params={"seed": 3, "trouble": "high"}).json()
     assert scenario["auto_events"] and scenario["demo_events"]
     client.post("/api/scenario", json=scenario)
     state = client.get("/api/state").json()
@@ -234,8 +234,10 @@ def test_check_reports_impossible_jobs_and_offers_a_fix(client):
 
 def test_uploaded_scenario_can_ask_for_generated_surprises(client):
     scenario = client.get("/api/scenario/random", params={"seed": 6}).json()
-    client.post("/api/scenario", json={**scenario, "demo_events": [], "auto_events": True})
-    assert client.get("/api/state").json()["surprises_left"] >= 2
+    client.post("/api/scenario", json={**scenario, "demo_events": [], "auto_events": True, "trouble": "high"})
+    assert client.get("/api/state").json()["surprises_left"] >= 4
+    client.post("/api/scenario", json={**scenario, "demo_events": [], "auto_events": True, "trouble": "low"})
+    assert 1 <= client.get("/api/state").json()["surprises_left"] <= 4
     client.post("/api/scenario", json={**scenario, "auto_events": False})
     assert client.get("/api/state").json()["surprises_left"] == 0
 
@@ -260,3 +262,28 @@ def test_state_gives_every_planned_job_its_spare_time(client):
     jobs = client.get("/api/state").json()["runs"]["coordinator"]["jobs"]
     planned = [j for j in jobs if j["status"] in ("assigned", "in_progress")]
     assert planned and all(j["slack"] is not None and j["projected_finish"] is not None for j in planned)
+
+
+def test_weather_event_holds_spraying_and_the_agronomy_agent_says_so(client):
+    client.post("/api/scenario", json=json.loads(DEMO_SCENARIO.read_text()))
+    res = client.post("/api/events", json={"type": "weather", "job_type": "spray", "hours": 2})
+    assert res.status_code == 200
+    replan = res.json()["replan"]
+    assert replan["accepted"] and replan["invariants"]["violations"] == []
+    assert replan["trace"]["agronomy"]["holds"] == [{"job_type": "spray", "until": 2.0}]
+    alert = replan["messages"][0]
+    assert alert["sender"] == "agronomy_agent" and "on hold until 08:00" in alert["text"]
+    state = client.get("/api/state").json()
+    assert state["weather_holds"] == [{"job_type": "spray", "until": 2.0}]
+    spray = [j for j in state["runs"]["coordinator"]["jobs"] if j["type"] == "spray"]
+    assert all(j["not_before"] == 2.0 for j in spray)
+    assert all(j["projected_finish"] is None or j["projected_finish"] >= 2.0 + j["work_hours"] - 1e-6 for j in spray)
+
+
+def test_weather_event_without_a_duration_is_rejected(client):
+    assert client.post("/api/events", json={"type": "weather", "job_type": "spray"}).status_code == 422
+
+
+def test_random_shift_can_be_asked_for_no_trouble_at_all(client):
+    scenario = client.get("/api/scenario/random", params={"seed": 9, "trouble": "none"}).json()
+    assert scenario["demo_events"] == [] and scenario["auto_events"] is False

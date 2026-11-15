@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { agentColor } from '../../agents'
 import { explainerId, replanMessagePrefix, type RadioItem, type RadioMode } from '../../radio'
 import { clock } from '../../theme'
+import type { IncidentRecord } from '../../types'
 import { MessageRow } from '../orchestration/MessageRow'
 import { Segmented } from '../shell/ViewHeader'
 import { ReplanCard } from './ReplanCard'
@@ -20,6 +21,7 @@ interface RadioFeedProps {
   backlog: number
   mode: RadioMode
   onMode: (mode: RadioMode) => void
+  incidentReviews: Record<string, IncidentRecord>
 }
 
 /** A status call worth a line in the summary: work finished or a stop at the depot. */
@@ -37,7 +39,7 @@ function Milestone({ item }: { item: RadioItem }) {
 }
 
 /** What the agents say to each other: a summary per re-plan by default, every message on request. */
-export function RadioFeed({ items, backlog, mode, onMode }: RadioFeedProps) {
+export function RadioFeed({ items, backlog, mode, onMode, incidentReviews }: RadioFeedProps) {
   const [expanded, setExpanded] = useState<ReadonlySet<string>>(new Set())
   const scroller = useRef<HTMLDivElement>(null)
 
@@ -75,7 +77,7 @@ export function RadioFeed({ items, backlog, mode, onMode }: RadioFeedProps) {
         {mode === 'summary' ? (
           <ul>
             {summaryRows.slice(-MAX_ROWS).map((item) => item.replan ? (
-              <ReplanCard key={item.id} item={item} replan={item.replan} messages={messagesOf(item.replan.index)} explanation={explanationOf(item.replan.index)}
+              <ReplanCard key={item.id} item={item} replan={item.replan} messages={messagesOf(item.replan.index)} explanation={explanationOf(item.replan.index)} incident={incidentReviews[String(item.replan.index)]}
                 isExpanded={expanded.has(item.id)} onToggle={() => toggle(item.id)} />
             ) : <Milestone key={item.id} item={item} />)}
           </ul>

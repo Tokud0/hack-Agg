@@ -348,3 +348,66 @@ def test_nothing_else_is_tried_for_failures_other_than_a_rate_limit(monkeypatch)
     calls = []
     monkeypatch.setattr(provider, "_groq_once", lambda model, *rest: (calls.append(model), (None, False))[1])
     assert provider._groq("system", "user", claude.Briefing) is None and len(calls) == 1
+
+
+# --- Incident Response Agent: real tool calls ---------------------------------
+
+
+def _incident_session():
+    from api.session import Session
+    from fleet.scenario import EventIn
+    session = Session.create()
+    session.apply_event(EventIn(at=0, type="breakdown", tractor_id="T1"))
+    index = max(i for i, e in enumerate(session.runs["coordinator"].log) if e.kind == "replan")
+    return session, index
+
+
+def test_every_event_gets_a_review_even_with_no_model(client):
+    session, index = _incident_session()
+    record = session.incident_reviews[index]
+    assert record["source"] == "template" and record["review"]["severity"] in ("low", "medium", "high")
+    assert [c["tool"] for c in record["calls"]] == ["get_incident", "evaluate_deadline_risk", "forecast_rest_of_shift", "file_incident_review"]
+    assert all(c["ok"] and c["chosen_by"] == "script" for c in record["calls"])
+    assert 0 not in session.incident_reviews  # the opening plan is not an incident
+
+
+def test_model_chosen_tool_calls_are_run_validated_and_recorded(client, monkeypatch):
+    from api.incident import review_incident
+    session, index = _incident_session()
+    turns = iter([
+        [("a", "get_incident", "{}"), ("b", "get_job_detail", '{"job_id": "J05"}')],
+        [("c", "get_job_detail", '{"job_id": "J99"}'), ("d", "launch_tractor", "{}")],
+        [("e", "file_incident_review", '{"severity": "medium", "finding": "T1 is out; J05 moved.", "recommendation": "No action needed."}')],
+    ])
+
+    def fake_chat(messages, tools):
+        return {"content": "", "tool_calls": [{"id": i, "type": "function", "function": {"name": n, "arguments": a}} for i, n, a in next(turns)]}
+
+    monkeypatch.setattr(provider, "provider_name", lambda: "groq")
+    monkeypatch.setattr(provider, "chat_with_tools", fake_chat)
+    record = review_incident(session, index)
+    calls = {(c["tool"], c["ok"]) for c in record["calls"]}
+    assert record["source"] == "groq" and record["review"]["finding"] == "T1 is out; J05 moved."
+    assert ("get_job_detail", True) in calls and ("get_job_detail", False) in calls  # unknown job is refused with a reason
+    assert ("launch_tractor", False) in calls  # a tool that is not registered is never run
+    assert all(c["chosen_by"] == "model" for c in record["calls"])
+
+
+def test_review_falls_back_when_the_model_never_concludes(client, monkeypatch):
+    from api.incident import review_incident
+    session, index = _incident_session()
+    monkeypatch.setattr(provider, "provider_name", lambda: "groq")
+    monkeypatch.setattr(provider, "chat_with_tools", lambda messages, tools: None)
+    record = review_incident(session, index)
+    assert record["source"] == "template" and record["review"] and record["notes"] == ["no model answered"]
+
+
+def test_incident_tools_never_change_the_fleet(client):
+    from api.incident import build_registry
+    from llm.tool_agent import call_tool
+    session, index = _incident_session()
+    before = session.runs["coordinator"].world
+    registry = build_registry(session, index)
+    for name in ("get_incident", "get_fleet_snapshot", "evaluate_deadline_risk", "forecast_rest_of_shift"):
+        assert call_tool(registry, name, {}).ok
+    assert session.runs["coordinator"].world == before

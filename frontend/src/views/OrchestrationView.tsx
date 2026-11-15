@@ -2,12 +2,13 @@ import { useState } from 'react'
 import { api } from '../api'
 import { ShieldIcon } from '../components/Icons'
 import { Conversation } from '../components/orchestration/Conversation'
+import { IncidentAgent } from '../components/orchestration/IncidentAgent'
 import { CandidateTable, FaultTestCard, Outcome } from '../components/orchestration/Details'
 import { Pipeline } from '../components/orchestration/Pipeline'
 import { describeTrigger } from '../labels'
 import { ViewHeader } from '../components/shell/ViewHeader'
 import { clock } from '../theme'
-import type { Explanation, FaultTestResult, LogEntry } from '../types'
+import type { Explanation, FaultTestResult, IncidentRecord, LogEntry } from '../types'
 
 const PRINCIPLES = [
   { title: 'One agent per tractor', text: 'Each answers only for itself: its place, fuel, implement and queue. A claimed job is never planned twice.' },
@@ -18,9 +19,10 @@ const PRINCIPLES = [
 interface OrchestrationViewProps {
   log: LogEntry[]
   explanations: Record<string, Explanation>
+  incidentReviews: Record<string, IncidentRecord>
 }
 
-export function OrchestrationView({ log, explanations }: OrchestrationViewProps) {
+export function OrchestrationView({ log, explanations, incidentReviews }: OrchestrationViewProps) {
   // null = follow the newest re-plan as it happens.
   const [pinnedIndex, setPinnedIndex] = useState<number | null>(null)
   const [faultTest, setFaultTest] = useState<FaultTestResult | null>(null)
@@ -80,6 +82,7 @@ export function OrchestrationView({ log, explanations }: OrchestrationViewProps)
             <Conversation replanIndex={selected.index} messages={selected.data.messages ?? []} />
             <Outcome replan={selected.data} explanation={explanation} />
           </div>
+          <IncidentAgent record={incidentReviews[String(selected.index)]} isIncident={selected.data.diff?.trigger.type !== 'initial_plan'} />
           <CandidateTable candidates={trace.plan.candidates} />
         </>
       ) : (

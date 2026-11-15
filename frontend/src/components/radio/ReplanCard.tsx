@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import { agentColor } from '../../agents'
 import type { RadioItem, ReplanDigest } from '../../radio'
+import type { IncidentRecord } from '../../types'
 import { clock } from '../../theme'
 import { ShieldIcon } from '../Icons'
 import { ChangeRow } from '../orchestration/Details'
@@ -15,12 +16,14 @@ interface ReplanCardProps {
   /** The messages of this re-plan revealed so far. */
   messages: RadioItem[]
   explanation?: string
+  /** The Incident Response Agent's review, once it has filed one. */
+  incident?: IncidentRecord
   isExpanded: boolean
   onToggle: () => void
 }
 
 /** One re-plan in a few lines: what set it off, the plan now, what changed and the verdict. */
-export function ReplanCard({ item, replan, messages, explanation, isExpanded, onToggle }: ReplanCardProps) {
+export function ReplanCard({ item, replan, messages, explanation, incident, isExpanded, onToggle }: ReplanCardProps) {
   // The opening plan "changes" every job, so listing them adds nothing to the plan itself.
   const changes = replan.isInitial ? replan.changes.filter((c) => c.after === 'unassignable') : replan.changes
   const hidden = Math.max(0, changes.length - MAX_CHANGES)
@@ -49,6 +52,12 @@ export function ReplanCard({ item, replan, messages, explanation, isExpanded, on
           <div className={label}>{replan.isInitial ? 'Cannot be done' : 'What changed'}</div>
           <ul>{changes.slice(0, MAX_CHANGES).map((c) => <ChangeRow key={c.job_id} change={c} />)}</ul>
           {hidden > 0 && <p className="mt-1 text-[11px] text-white/40">and {hidden} more</p>}
+        </div>
+      )}
+      {incident?.review && (
+        <div className="mt-2">
+          <div className={label}>Incident agent · {incident.calls.length} tool calls · {incident.review.severity} severity</div>
+          <p className="mt-1 text-[12px] leading-snug text-white/75">{incident.review.recommendation}</p>
         </div>
       )}
       {replan.risks.length > 0 && (

@@ -112,6 +112,46 @@ def _groq(system: str, user: str, schema: type[BaseModel]) -> BaseModel | None:
     return None
 
 
+TOOL_MAX_TOKENS = 1200
+
+
+def _groq_tools_once(model: str, api_key: str, messages: list[dict], tools: list[dict]) -> tuple[dict | None, bool]:
+    """One chat turn in which the model may call tools. Returns the assistant message and whether it was rate limited."""
+    payload = {
+        "model": model,
+        "reasoning_effort": "low",
+        "temperature": 0.2,
+        "max_completion_tokens": TOOL_MAX_TOKENS,
+        "messages": messages,
+        "tools": tools,
+        "tool_choice": "auto",
+    }
+    try:
+        res = httpx.post(GROQ_URL, json=payload, headers={"Authorization": f"Bearer {api_key}"}, timeout=GROQ_TIMEOUT_S)
+        res.raise_for_status()
+        return res.json()["choices"][0]["message"], False
+    except httpx.HTTPStatusError as exc:
+        logger.warning("Groq %s HTTP %s: %s", model, exc.response.status_code, exc.response.text[:300])
+        return None, exc.response.status_code == HTTP_TOO_MANY_REQUESTS
+    except httpx.HTTPError as exc:
+        logger.warning("Groq unreachable: %s", exc)
+    except (KeyError, IndexError, ValueError) as exc:
+        logger.warning("Groq %s returned an unusable tool turn: %s", model, exc)
+    return None, False
+
+
+def chat_with_tools(messages: list[dict], tools: list[dict]) -> dict | None:
+    """One tool-calling turn on Groq, with the same key and model fallbacks as `structured`. None when no model answers."""
+    if provider_name() != "groq":
+        return None
+    for model in (groq_model(), groq_backup_model()):
+        for key in groq_keys():
+            message, is_rate_limited = _groq_tools_once(model, key, messages, tools)
+            if message is not None or not is_rate_limited:
+                return message
+    return None
+
+
 _claude_client: anthropic.Anthropic | None = None
 
 

@@ -172,7 +172,7 @@ export default function App() {
               <LiveView run={coord} map={map} baselineKind={baselineKind} baselineMetrics={base.metrics}
                 highlight={highlight} handoffs={handoffs} lastWords={lastWords} speech={radio.speech} onBreak={breakdown} onSelectJob={setWhyJob} />
             )}
-            {page === 'orchestration' && <OrchestrationView log={coord.log} explanations={session.explanations} />}
+            {page === 'orchestration' && <OrchestrationView log={coord.log} explanations={session.explanations} incidentReviews={session.incident_reviews ?? {}} />}
             {page === 'schedule' && <ScheduleView runs={session.runs} highlight={highlight} onSelectJob={setWhyJob} />}
             {page === 'compare' && (
               <CompareView coordinator={coord} baseline={base} baselineKind={baselineKind} onBaselineKind={setBaselineKind} map={map}
@@ -185,7 +185,7 @@ export default function App() {
 
         <SideDock tab={dockTab} onTab={setDockTab} hasUnreadReplan={hasUnreadReplan}
           panels={{
-            radio: <RadioFeed items={radio.items} backlog={radio.backlog} mode={radioMode} onMode={setRadioMode} />,
+            radio: <RadioFeed items={radio.items} backlog={radio.backlog} mode={radioMode} onMode={setRadioMode} incidentReviews={session.incident_reviews ?? {}} />,
             replan: replanPanel,
             chat: <Copilot />,
             jobs: <JobsTool fields={map.fields.map((f) => f.id)} nowHours={coord.time} />,

@@ -19,6 +19,7 @@ from fleet.risk import at_risk
 from fleet.whatif import forecast
 from llm.assistant import explain_replan
 
+from .incident import review_incident
 from .serialize import snapshot, static_map
 
 logger = logging.getLogger(__name__)
@@ -39,6 +40,9 @@ class Session:
     # Changes on every restart or new scenario, so clients can tell a new shift from a longer log.
     id: str = field(default_factory=lambda: uuid4().hex[:8])
     explanations: dict[int, dict] = field(default_factory=dict)
+    # Incident Response Agent's review of each event-driven re-plan, keyed by its log index.
+    incident_reviews: dict[int, dict] = field(default_factory=dict)
+    _reviewing: set[int] = field(default_factory=set)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     _explaining: set[int] = field(default_factory=set)
 
@@ -119,6 +123,7 @@ class Session:
     # --- explanations (async, never block the clock) -----------------------
 
     def schedule_explanations(self) -> None:
+        self.schedule_incident_reviews()
         for i, entry in enumerate(self.runs["coordinator"].log):
             if entry.kind != "replan" or i in self.explanations or i in self._explaining:
                 continue
@@ -127,6 +132,29 @@ class Session:
                 asyncio.get_running_loop().create_task(self._explain(i, entry.data["diff"]))
             except RuntimeError:  # no loop yet (startup): explain synchronously via template path
                 self._store(i, *explain_replan(entry.data["diff"]))
+
+    def schedule_incident_reviews(self) -> None:
+        """Start the Incident Response Agent on every event-driven re-plan it has not looked at yet."""
+        for i, entry in enumerate(self.runs["coordinator"].log):
+            is_incident = entry.kind == "replan" and entry.data["diff"]["trigger"].get("type") != "initial_plan"
+            if not is_incident or i in self.incident_reviews or i in self._reviewing:
+                continue
+            self._reviewing.add(i)
+            try:
+                asyncio.get_running_loop().create_task(self._review(i))
+            except RuntimeError:  # no loop (tests, scripts): do it now
+                self._finish_review(i, review_incident(self, i))
+
+    async def _review(self, index: int) -> None:
+        try:
+            self._finish_review(index, await asyncio.to_thread(review_incident, self, index))
+        except Exception:  # the review is extra; it must never take the shift down
+            logger.exception("incident review %s failed", index)
+            self._reviewing.discard(index)
+
+    def _finish_review(self, index: int, record: dict) -> None:
+        self.incident_reviews = {**self.incident_reviews, index: record}
+        self._reviewing.discard(index)
 
     async def _explain(self, index: int, diff: dict) -> None:
         try:
@@ -153,6 +181,7 @@ class Session:
             "scenario": self.scenario.name,
             "runs": {name: snapshot(run) for name, run in self.runs.items()},
             "explanations": {str(k): v for k, v in self.explanations.items()},
+            "incident_reviews": {str(k): v for k, v in self.incident_reviews.items()},
             "weather_holds": weather_holds(self.runs["coordinator"].world),
             "scheduled_faults": [
                 {"tractor_id": e.tractor_id, "at": e.at} for e in pending if e.source != SURPRISE

@@ -162,6 +162,8 @@ export interface SessionView {
   scenario: string
   runs: Record<Strategy, RunSnapshot>
   explanations: Record<string, Explanation>
+  /** The Incident Response Agent's review of each event-driven re-plan, by log index. */
+  incident_reviews: Record<string, IncidentRecord>
   /** Faults that will arrive by themselves on the simulation clock. */
   scheduled_faults: { tractor_id: string; at: number }[]
   /** Generated events of a random shift that have not happened yet. */
@@ -252,4 +254,22 @@ export interface ShiftBriefing {
   clock: string
   jobs: { total: number; done_on_time: number; in_progress: number; waiting: number; not_doable: number }
   attention: AttentionItem[]
+}
+
+/** One tool call of the Incident Response Agent, as the server ran it. */
+export interface ToolCall {
+  tool: string
+  arguments: Record<string, unknown>
+  ok: boolean
+  result: Record<string, unknown>
+  duration_ms: number
+  /** "model": the LLM chose to make this call. "script": the fixed fallback sequence made it. */
+  chosen_by: 'model' | 'script'
+}
+
+export interface IncidentRecord {
+  source: string
+  review: { severity: 'low' | 'medium' | 'high'; finding: string; recommendation: string } | null
+  calls: ToolCall[]
+  notes: string[]
 }

@@ -54,6 +54,21 @@ The orchestrator follows ATC's suggested architecture. Every event goes through 
 | 5 | Safety Agent | Hard rules | Checks the 4 invariants on the winning plan | Has a veto: a failed plan is discarded and the last valid plan stays |
 | 6 | Explainer | LLM | Tells the operator what changed and why | Reads the result; cannot change the plan |
 
+### The Incident Response Agent: an LLM that calls tools
+
+After every event, once the fleet has recovered by itself, one LLM agent investigates (`backend/api/incident.py`, `backend/llm/tool_agent.py`). It decides which tools to call; the server validates the arguments and runs them:
+
+| Tool | What it returns |
+|---|---|
+| `get_incident` | What happened, when, and what the automatic re-plan changed |
+| `get_fleet_snapshot` | Every tractor: status, fuel, current job, queue |
+| `get_job_detail(job_id)` | One job: priority, deadline, owner, projected finish, spare time |
+| `evaluate_deadline_risk` | Jobs the plan finishes less than 30 minutes before their deadline |
+| `forecast_rest_of_shift` | The rest of the shift played on a copy: jobs done, jobs lost, and how FCFS would do |
+| `file_incident_review` | Files the review for the manager: severity, finding, recommendation |
+
+The Agents page shows each call in order with its arguments, its result, how long it took and whether the model chose it. Limits, all tested: only registered tools run (an unknown tool or a job id that does not exist is refused, not run); every tool except the last only reads, so the agent cannot change the plan; turns and calls are capped; recovery never waits for it. If no model answers, the same tools are run in a fixed order and the review is written by rule, and the record says so.
+
 ### One agent per tractor, and how they talk
 
 Inside the Fleet Agent's step every tractor has its own agent (`backend/fleet/agents.py`). Each answers only for itself (position, fuel, implement, queue), and each re-plan is a conversation in four phases:
@@ -73,7 +88,7 @@ The **Agents** page shows this for any re-plan: the full conversation (filter by
 
 ```bash
 cd backend
-.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 251 tests
+.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 255 tests
 .venv/bin/python -m scripts.benchmark --n 50       # coordinator vs baseline table
 .venv/bin/python -m scripts.export_demo            # writes results/
 ```

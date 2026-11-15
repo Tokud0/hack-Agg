@@ -11,7 +11,7 @@ from __future__ import annotations
 import random
 from collections.abc import Callable
 from dataclasses import dataclass, replace
-from typing import Literal
+from typing import Literal, Protocol
 
 from .feasibility import QueueEval, StartContext, evaluate_queue, start_context
 from .models import Implement, Job, JobStatus, Plan, Tractor, TractorStatus, World
@@ -132,6 +132,17 @@ TradeObserver = Callable[[Queues, Queues, float], None]  # queues before, queues
 Build = Callable[["AwardObserver | None"], Queues]
 
 
+class SearchObserver(Protocol):
+    """Watches one candidate being built and improved. Observers never change the search."""
+
+    def on_award(self, job_id: str, queues: Queues, winner: str | None, rule: AwardRule) -> None: ...
+
+    def on_trade(self, before: Queues, after: Queues, gain: float) -> None: ...
+
+
+ObserverFactory = Callable[["PlanningInput"], SearchObserver]
+
+
 def greedy(inp: PlanningInput, order: tuple[str, ...] | None = None, observe: AwardObserver | None = None) -> Queues:
     """Cheapest feasible insertion of each job, in the given order."""
     queues: Queues = {t.id: () for t in inp.tractors}
@@ -190,20 +201,25 @@ def _starting_plans(inp: PlanningInput) -> list[tuple[str, Build]]:
     return starts
 
 
-def search(inp: PlanningInput, iterations: int) -> tuple[Queues, tuple[Candidate, ...]]:
-    """Improve every starting plan; return the best one plus the record of all candidates."""
+def search(
+    inp: PlanningInput, iterations: int, new_observer: ObserverFactory | None = None
+) -> tuple[Queues, tuple[Candidate, ...], SearchObserver | None]:
+    """Improve every starting plan; return the best one, the record of all candidates and,
+    when observers are attached, the observer that watched the winning candidate being built."""
     best_queues: Queues = {t.id: () for t in inp.tractors}
     best_score = score_plan(inp, best_queues) or 0.0
     winner: int | None = None
+    winning_observer: SearchObserver | None = None
     candidates: list[Candidate] = []
     for name, build in _starting_plans(inp):
-        start = build(None)
-        queues = local_search(inp, start, iterations)
+        observer = new_observer(inp) if new_observer else None
+        start = build(observer.on_award if observer else None)
+        queues = local_search(inp, start, iterations, observer.on_trade if observer else None)
         score = score_plan(inp, queues)
         candidates.append(Candidate(name, score_plan(inp, start), score, sum(len(q) for q in queues.values())))
         if score is not None and score > best_score + 1e-6:
-            best_queues, best_score, winner = queues, score, len(candidates) - 1
-    return best_queues, tuple(replace(c, is_winner=i == winner) for i, c in enumerate(candidates))
+            best_queues, best_score, winner, winning_observer = queues, score, len(candidates) - 1, observer
+    return best_queues, tuple(replace(c, is_winner=i == winner) for i, c in enumerate(candidates)), winning_observer
 
 
 def best_plan(inp: PlanningInput, iterations: int) -> Queues:
@@ -264,32 +280,19 @@ def local_search(
     return current
 
 
-def replay_winner(
-    inp: PlanningInput,
-    candidates: tuple[Candidate, ...],
-    on_award: AwardObserver,
-    on_trade: TradeObserver,
-    iterations: int = DEFAULT_ITERATIONS,
-) -> None:
-    """Re-run only the winning candidate with observers attached.
-
-    The search is deterministic, so the replay takes exactly the steps of the first run.
-    """
-    for candidate, (_, build) in zip(candidates, _starting_plans(inp)):
-        if candidate.is_winner:
-            local_search(inp, build(on_award), iterations, on_trade)
-
-
 def plan(world: World, network: RoadNetwork, iterations: int = DEFAULT_ITERATIONS) -> Plan:
     return plan_with_trace(world, network, iterations)[0]
 
 
 def plan_with_trace(
-    world: World, network: RoadNetwork, iterations: int = DEFAULT_ITERATIONS
-) -> tuple[Plan, tuple[Candidate, ...]]:
-    """The plan plus every candidate the search considered (for the orchestration trace)."""
+    world: World,
+    network: RoadNetwork,
+    iterations: int = DEFAULT_ITERATIONS,
+    new_observer: ObserverFactory | None = None,
+) -> tuple[Plan, tuple[Candidate, ...], SearchObserver | None]:
+    """The plan, every candidate the search considered and the winning candidate's observer."""
     inp = build_input(world, network)
-    queues, candidates = search(inp, iterations)
+    queues, candidates, observer = search(inp, iterations, new_observer)
     assigned = {jid for q in queues.values() for jid in q}
     unassignable = {jid: unassignable_reason(inp, queues, jid) for jid in inp.pool if jid not in assigned}
     broken = {tid: () for tid, t in world.tractors.items() if t.status == TractorStatus.BROKEN}
@@ -298,4 +301,4 @@ def plan_with_trace(
         unassignable=unassignable,
         score=score_plan(inp, queues) or 0.0,
     )
-    return result, candidates
+    return result, candidates, observer

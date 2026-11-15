@@ -139,3 +139,38 @@ def test_tractor_agent_answers_from_its_own_messages(client):
 
 def test_asking_an_unknown_tractor_is_a_404(client):
     assert client.post("/api/agents/T9/ask", json={"question": "hi"}).status_code == 404
+
+
+def test_scheduled_fault_fires_on_the_clock_and_the_fleet_recovers_without_a_click(client):
+    client.post("/api/control", json={"action": "reset"})
+    res = client.post("/api/events/schedule", json={"tractor_id": "T1", "delay_hours": 0.5})
+    assert res.status_code == 200 and res.json()["at"] == 0.5
+    assert client.get("/api/state").json()["scheduled_faults"] == [{"tractor_id": "T1", "at": 0.5}]
+
+    from api.main import session
+    session().running = True
+    for _ in range(60):  # 6 real seconds at 1x = 0.9 simulated hours; no event is posted
+        session().advance(0.1)
+
+    state = client.get("/api/state").json()
+    coord = state["runs"]["coordinator"]
+    assert state["scheduled_faults"] == []
+    assert next(t for t in coord["tractors"] if t["id"] == "T1")["status"] == "broken"
+    replans = [e for e in coord["log"] if e["kind"] == "replan"]
+    assert replans[-1]["data"]["diff"]["trigger"]["source"] == "telemetry"
+    assert replans[-1]["data"]["accepted"] and replans[-1]["data"]["invariants"]["violations"] == []
+    assert all(not t["queue"] for t in coord["tractors"] if t["id"] == "T1")
+
+
+def test_scheduling_a_fault_for_an_unknown_tractor_is_rejected(client):
+    assert client.post("/api/events/schedule", json={"tractor_id": "T9", "delay_hours": 1}).status_code == 422
+
+
+def test_tractor_agent_can_be_asked_about_an_older_round(client):
+    client.post("/api/control", json={"action": "reset"})
+    client.post("/api/events", json={"type": "breakdown", "tractor_id": "T1"})
+    log = client.get("/api/state").json()["runs"]["coordinator"]["log"]
+    first = next(e["index"] for e in log if e["kind"] == "replan")
+    res = client.post("/api/agents/T1/ask", json={"question": "What did you take?", "replan_index": first})
+    assert res.status_code == 200 and "is mine" in res.json()["answer"]
+    assert client.post("/api/agents/T1/ask", json={"question": "x", "replan_index": 0}).status_code == 404

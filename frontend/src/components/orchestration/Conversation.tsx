@@ -82,7 +82,7 @@ function MessageRow({ message, delay }: { message: AgentMessage; delay: number }
   )
 }
 
-function AskAgent({ tractorId }: { tractorId: string }) {
+function AskAgent({ tractorId, replanIndex }: { tractorId: string; replanIndex: number }) {
   const [question, setQuestion] = useState('')
   const [isBusy, setIsBusy] = useState(false)
   const [reply, setReply] = useState<{ answer: string; source: string } | null>(null)
@@ -94,7 +94,7 @@ function AskAgent({ tractorId }: { tractorId: string }) {
     setIsBusy(true)
     setError(null)
     try {
-      setReply(await api.askAgent(tractorId, question.trim()))
+      setReply(await api.askAgent(tractorId, question.trim(), replanIndex))
     } catch (e) {
       setError(e instanceof Error ? e.message : 'The agent did not answer')
     } finally {
@@ -106,7 +106,7 @@ function AskAgent({ tractorId }: { tractorId: string }) {
     <div className="mt-2 border-t border-white/8 pt-2">
       <form onSubmit={ask} className="flex gap-2">
         <input value={question} onChange={(e) => setQuestion(e.target.value)} maxLength={300} aria-label={`Question for ${tractorId}`}
-          placeholder={`Ask ${tractorId}'s agent, e.g. why did you take that job?`} className={`${inputCls} min-w-0 flex-1`} />
+          placeholder={`Ask ${tractorId}'s agent about this round, e.g. why did you take that job?`} className={`${inputCls} min-w-0 flex-1`} />
         <button type="submit" disabled={isBusy || !question.trim()}
           className="rounded-md px-3 text-xs font-extrabold text-black disabled:opacity-40" style={{ background: tractorColor(tractorId) }}>{isBusy ? 'Asking…' : `Ask ${tractorId}`}</button>
       </form>
@@ -152,6 +152,10 @@ export function Conversation({ replanIndex, messages }: ConversationProps) {
         </div>
       </div>
 
+      <p className="mt-1.5 text-[11px] leading-snug text-white/45">
+        <b className="text-white/65">Recorded trace.</b> Written down step by step while the Fleet Agent searched for this plan. Every number is computed by code; no LLM wrote these messages. Only the answer to &quot;Ask&quot; below comes from the LLM.
+      </p>
+
       <div className="mt-2 min-h-0 flex-1 overflow-y-auto pr-1">
         {PHASES.map((phase, phaseIndex) => {
           const inPhase = shown.filter((m) => m.phase === phase.id)
@@ -175,7 +179,7 @@ export function Conversation({ replanIndex, messages }: ConversationProps) {
         {shown.length === 0 && <p className="py-6 text-center text-sm text-white/40">No messages recorded for this re-plan.</p>}
       </div>
 
-      {isTractor(selected) && selected !== EVERYONE && <AskAgent key={selected} tractorId={selected} />}
+      {isTractor(selected) && selected !== EVERYONE && <AskAgent key={`${selected}-${replanIndex}`} tractorId={selected} replanIndex={replanIndex} />}
     </section>
   )
 }

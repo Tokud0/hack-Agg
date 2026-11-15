@@ -8,8 +8,10 @@ with a bid or the reason it cannot take it, the best bid wins, the Navigation Ag
 its route and the winner claims the job so no one else plans for it. Tractors then trade jobs
 whenever that improves the plan, and the Safety Agent approves or vetoes the result.
 
-Nothing here decides anything: the messages are recorded by observing the planner
-(`coordinator.replay_winner`), and every number in a bid comes from the same feasibility code.
+This module decides nothing. The planner is one deterministic search, not separate processes: a
+`Recorder` is attached to it as an observer and writes the messages down while the search runs
+(one recorder per candidate round; the winning round's record is kept). Every number in a bid
+comes from the same feasibility code the planner uses. The LLM writes none of these messages.
 """
 
 from __future__ import annotations
@@ -19,13 +21,10 @@ from dataclasses import dataclass, field
 
 from .coordinator import (
     AwardRule,
-    Candidate,
     PlanningInput,
     Queues,
     _eval,
     _queue_cost,
-    build_input,
-    replay_winner,
 )
 from .models import TractorStatus, World
 from .replan import ReplanResult
@@ -86,6 +85,13 @@ def _detour(world: World, network: RoadNetwork, a: str, b: str) -> str:
     return f"Detour: {_route(network, a, b)}, {network.distance(a, b):.1f} km instead of {math.hypot(ax - bx, ay - by):.1f} km."
 
 
+def _caught_note(trigger: dict) -> str:
+    caught = trigger.get("caught_on_road") or []
+    if not caught:
+        return " Every route in use has been re-planned around it."
+    return f" {_jobs(caught)} was already on that road and finishes the stretch; every later route avoids it."
+
+
 def _road_map_message(world: World) -> Message:
     closed = sorted("–".join(sorted(road)) for road in world.blocked_roads)
     state = f"closed: {', '.join(closed)}. Travel times already include the detours" if closed else "all roads open"
@@ -109,8 +115,8 @@ def _trigger_messages(world: World, network: RoadNetwork, trigger: dict, release
     if kind == "block_road":
         a, b = str(trigger["a"]), str(trigger["b"])
         return [
-            Message(NAVIGATION_AGENT, EVERYONE, "alert", "situation", f"Road {a}–{b} is closed. {_detour(world, network, a, b)}",
-                    data={"road": [a, b]}),
+            Message(NAVIGATION_AGENT, EVERYONE, "alert", "situation",
+                    f"Road {a}–{b} is closed. {_detour(world, network, a, b)}{_caught_note(trigger)}", data={"road": [a, b]}),
             Message(FLEET_AGENT, EVERYONE, "note", "situation", "Routes have changed. Re-opening the auction for all open work. Report your status."),
         ]
     if kind == "change_priority":
@@ -177,8 +183,8 @@ def _owners(queues: Queues) -> dict[str, str]:
     return {jid: tid for tid, q in queues.items() for jid in q}
 
 
-class _Recorder:
-    """Collects messages while the planner replays its winning round."""
+class Recorder:
+    """Search observer: writes down one candidate round as messages while the planner runs it."""
 
     def __init__(self, inp: PlanningInput) -> None:
         self.inp = inp
@@ -260,14 +266,13 @@ class _Recorder:
             say(tid, FLEET_AGENT, "trade", f"I give {_jobs(dropped)} back to the pool and take {_jobs(taken)} instead: worth more. {better}", data)
 
 
-def negotiation(inp: PlanningInput, candidates: tuple[Candidate, ...]) -> list[Message]:
-    winner = next((c for c in candidates if c.is_winner), None)
-    if winner is None:
+def negotiation(result: ReplanResult) -> list[Message]:
+    winner = next((c for c in result.candidates if c.is_winner), None)
+    recorder = result.observer
+    if winner is None or not isinstance(recorder, Recorder):
         return [Message(FLEET_AGENT, EVERYONE, "note", "auction", "No open job can be handed out right now.")]
-    recorder = _Recorder(inp)
-    replay_winner(inp, candidates, recorder.on_award, recorder.on_trade)
     intro = Message(FLEET_AGENT, EVERYONE, "note", "auction",
-                    f"I ran this auction {len(candidates)} times, announcing the jobs in a different order each time. "
+                    f"I ran this auction {len(result.candidates)} times, announcing the jobs in a different order each time. "
                     f"Best outcome: \"{winner.name}\". This is that round.")
     return [intro, *recorder.auction, *recorder.trades]
 
@@ -301,6 +306,6 @@ def approval(result: ReplanResult) -> list[Message]:
 def transcript(
     world: World, network: RoadNetwork, trigger: dict, released: dict[str, str], result: ReplanResult
 ) -> tuple[Message, ...]:
-    """The whole conversation of one re-plan. `world` is the state the planner saw (after the event)."""
-    inp = build_input(world, network)
-    return (*situation(world, network, trigger, released), *negotiation(inp, result.candidates), *approval(result))
+    """The whole conversation of one re-plan. `world` is the state the planner saw (after the event);
+    `result` must come from `replan(..., new_observer=Recorder)`."""
+    return (*situation(world, network, trigger, released), *negotiation(result), *approval(result))

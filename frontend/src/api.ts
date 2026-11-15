@@ -40,8 +40,16 @@ export const api = {
   whatIf: (event: ProposedEvent) => request<WhatIfResult>('/api/whatif', { method: 'POST', body: JSON.stringify(event) }),
   uploadScenario: (scenario: unknown) =>
     request<{ ok: boolean; scenario: string; jobs: number }>('/api/scenario', { method: 'POST', body: JSON.stringify(scenario) }),
-  askAgent: (tractorId: string, question: string) =>
-    request<{ answer: string; source: string }>(`/api/agents/${tractorId}/ask`, { method: 'POST', body: JSON.stringify({ question }) }),
+  askAgent: (tractorId: string, question: string, replanIndex: number) =>
+    request<{ answer: string; source: string }>(`/api/agents/${tractorId}/ask`, {
+      method: 'POST',
+      body: JSON.stringify({ question, replan_index: replanIndex }),
+    }),
+  scheduleFault: (tractorId: string, delayHours: number) =>
+    request<{ ok: boolean; at: number }>('/api/events/schedule', {
+      method: 'POST',
+      body: JSON.stringify({ tractor_id: tractorId, delay_hours: delayHours }),
+    }),
   faultTest: () => request<FaultTestResult>('/api/orchestration/fault-test', { method: 'POST' }),
   benchmark: () => request<BenchmarkResult>('/api/benchmark'),
 }

@@ -79,6 +79,7 @@ interface OutcomeProps {
 export function Outcome({ replan, explanation }: OutcomeProps) {
   const checked = replan.invariants?.checked ?? []
   const violations = replan.invariants?.violations ?? []
+  const warnings = replan.invariants?.warnings ?? []
   const changes = replan.diff?.changes ?? []
   return (
     <section className="panel flex flex-col gap-3 p-3" aria-label="Result of this re-plan">
@@ -95,6 +96,7 @@ export function Outcome({ replan, explanation }: OutcomeProps) {
             )
           })}
         </ul>
+        {warnings.map((w) => <p key={w} className="mt-1.5 text-[11.5px] leading-snug text-wheat">Warning, not caused by this plan: {w}.</p>)}
       </div>
       <div>
         <h2 className={heading}>Fleet Agent: who got what</h2>

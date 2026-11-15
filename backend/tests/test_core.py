@@ -4,12 +4,12 @@ from pathlib import Path
 import pytest
 
 from fleet.coordinator import plan
-from fleet.engine import apply_event, metrics, run_to_end, start
+from fleet.engine import apply_event, metrics, run_to_end, start, tick
 from fleet.feasibility import StartContext, evaluate_queue
 from fleet.invariants import check_plan
 from fleet.models import JobStatus, Plan, TractorStatus
-from fleet.replan import block_road, break_tractor, current_plan, fault_test, replan
-from fleet.agents import transcript
+from fleet.replan import block_road, break_tractor, current_plan, fault_test, on_closed_stretch, replan, reroute_in_transit
+from fleet.agents import Recorder, transcript
 from fleet.routing import build_network
 from fleet.scenario import EventIn, ScenarioIn, load_scenario, random_scenario, to_world
 
@@ -265,7 +265,7 @@ def _replay_queues(messages) -> dict[str, tuple[str, ...]]:
 
 def _conversation(world, trigger=None, released=None):
     network = build_network(world)
-    result = replan(world, network)
+    result = replan(world, network, Recorder)
     return result, transcript(world, network, trigger or {"type": "initial_plan"}, released or {}, result)
 
 
@@ -312,3 +312,90 @@ def test_navigation_agent_reports_the_detour_and_routes_the_winners(world):
     awards = [m for m in messages if m.kind == "award"]
     routes = [m for m in messages if m.kind == "route"]
     assert len(routes) == len(awards) and all(m.sender == "navigation_agent" for m in routes)
+
+
+# --- safety checks against corrupt state -------------------------------------
+
+
+def _working_world(world):
+    """The demo shift a little after 07:00, with tractors on their first jobs."""
+    run = start(load_scenario(SCENARIO_PATH), "coordinator", with_demo_events=False)
+    while run.world.time < 1.2:
+        run = tick(run, 0.05)
+    return run.world
+
+
+def test_two_tractors_on_the_same_current_job_are_vetoed(world):
+    live = _working_world(world)
+    job_id = live.tractors["T1"].current_job
+    assert job_id
+    corrupt = replace(live, tractors={**live.tractors, "T3": replace(live.tractors["T3"], current_job=job_id)})
+    report = check_plan(corrupt, current_plan(corrupt), build_network(corrupt))
+    assert any(v.startswith("one_tractor_per_job") and "2 tractors" in v for v in report.violations)
+
+
+def test_current_job_with_the_wrong_implement_is_vetoed(world):
+    live = _working_world(world)
+    mow_job = live.tractors["T2"].current_job
+    assert mow_job
+    corrupt = replace(live, tractors={**live.tractors, "T2": replace(live.tractors["T2"], current_job=None, queue=()),
+                                      "T1": replace(live.tractors["T1"], current_job=mow_job)})
+    report = check_plan(corrupt, current_plan(corrupt), build_network(corrupt))
+    assert any("carries a sprayer" in v for v in report.violations)
+
+
+def test_current_job_without_enough_fuel_is_vetoed(world):
+    live = _working_world(world)
+    corrupt = replace(live, tractors={**live.tractors, "T1": replace(live.tractors["T1"], fuel=0.5)})
+    report = check_plan(corrupt, current_plan(corrupt), build_network(corrupt))
+    assert any("runs out of fuel" in v for v in report.violations)
+
+
+def test_current_job_past_its_deadline_is_reported_but_not_vetoed(world):
+    live = _working_world(world)
+    job_id = live.tractors["T1"].current_job
+    late = replace(live, jobs={**live.jobs, job_id: replace(live.jobs[job_id], deadline=live.time)})
+    report = check_plan(late, current_plan(late), build_network(late))
+    assert report.ok and any(job_id in w for w in report.warnings)
+
+
+def test_healthy_shift_has_no_violations_or_warnings(world):
+    live = _working_world(world)
+    report = check_plan(live, current_plan(live), build_network(live))
+    assert report.ok and not report.warnings
+
+
+# --- road closing under a driving tractor ------------------------------------
+
+
+def _driving(world, tractor_id, node, path, x, y):
+    return replace(world, tractors={**world.tractors, tractor_id: replace(
+        world.tractors[tractor_id], status=TractorStatus.TRAVELING, node=node, path=path, x=x, y=y)})
+
+
+def test_tractor_already_on_the_closed_road_finishes_that_stretch(world):
+    (ax, ay), (bx, by) = world.node_position("F1"), world.node_position("F4")
+    moving = _driving(world, "T1", "F1", ("F4",), (ax + bx) / 2, (ay + by) / 2)
+    assert on_closed_stretch(moving, "T1", "F4", "F1")
+    closed = block_road(moving, "F1", "F4")
+    assert reroute_in_transit(closed, build_network(closed)).tractors["T1"].path == ("F4",)
+
+
+def test_tractor_that_has_not_left_its_node_is_routed_around_the_closed_road(world):
+    ax, ay = world.node_position("F1")
+    waiting = _driving(world, "T1", "F1", ("F4",), ax, ay)
+    assert not on_closed_stretch(waiting, "T1", "F1", "F4")
+    closed = block_road(waiting, "F1", "F4")
+    network = build_network(closed)
+    path = reroute_in_transit(closed, network).tractors["T1"].path
+    assert path == network.path("F1", "F4") and len(path) > 1
+
+
+def test_later_legs_of_a_route_avoid_a_road_that_closes_ahead(world):
+    (ax, ay), (bx, by) = world.node_position("F1"), world.node_position("F4")
+    moving = _driving(world, "T1", "F1", ("F4", "F6"), (ax + bx) / 2, (ay + by) / 2)
+    closed = block_road(moving, "F4", "F6")
+    network = build_network(closed)
+    path = reroute_in_transit(closed, network).tractors["T1"].path
+    assert path[0] == "F4" and path[-1] == "F6" and path == ("F4", *network.path("F4", "F6"))
+    assert all(frozenset(leg) != frozenset(("F4", "F6")) for leg in zip(path, path[1:]))

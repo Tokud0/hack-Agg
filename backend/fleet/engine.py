@@ -9,7 +9,7 @@ from . import agents, baseline
 from .coordinator import PRIORITY_WEIGHT
 from .diff import diff_plans
 from .models import Job, JobStatus, TractorStatus, World
-from .replan import block_road, break_tractor, change_priority, replan
+from .replan import block_road, break_tractor, change_priority, on_closed_stretch, replan, reroute_in_transit
 from .routing import RoadNetwork, build_network
 from .scenario import EventIn, ScenarioIn, to_world
 from .simulator import DEFAULT_DT, is_finished, step
@@ -47,7 +47,7 @@ def _with_log(run: Run, *entries: LogEntry) -> Run:
 def _replan_entry(run: Run, trigger: dict, released: dict[str, str]) -> Run:
     open_jobs = sorted(j.id for j in run.world.jobs.values() if j.status != JobStatus.DONE)
     available = sorted(t.id for t in run.world.tractors.values() if t.status != TractorStatus.BROKEN)
-    result = replan(run.world, run.network)
+    result = replan(run.world, run.network, agents.Recorder if run.record_messages else None)
     diff = diff_plans(result.world, result.previous_plan, result.plan, trigger, released)
     messages = agents.transcript(run.world, run.network, trigger, released, result) if run.record_messages else ()
     entry = LogEntry(
@@ -58,7 +58,11 @@ def _replan_entry(run: Run, trigger: dict, released: dict[str, str]) -> Run:
         data={
             "duration_ms": round(result.duration_ms, 2),
             "accepted": result.accepted,
-            "invariants": {"checked": list(result.report.checked), "violations": list(result.report.violations)},
+            "invariants": {
+                "checked": list(result.report.checked),
+                "violations": list(result.report.violations),
+                "warnings": list(result.report.warnings),
+            },
             "diff": diff.to_dict(),
             "messages": [asdict(m) for m in messages],
             "trace": {
@@ -123,8 +127,13 @@ def apply_event(run: Run, event: EventIn) -> Run:
         world = break_tractor(world, event.tractor_id)
         message = f"{event.tractor_id} broke down" + (f", released {', '.join(held)}" if held else "")
     elif event.type == "block_road" and event.a and event.b:
-        world = block_road(world, event.a, event.b)
-        message = f"Road {event.a}–{event.b} closed"
+        caught = [tid for tid in sorted(world.tractors) if on_closed_stretch(world, tid, event.a, event.b)]
+        blocked = block_road(world, event.a, event.b)
+        world = reroute_in_transit(blocked, build_network(blocked))
+        message = f"Road {event.a}–{event.b} closed" + (
+            f"; {', '.join(caught)} already on it, finishing that stretch" if caught else ""
+        )
+        trigger = {**trigger, "caught_on_road": caught}
     elif event.type == "change_priority" and event.job_id and event.priority:
         world = change_priority(world, event.job_id, event.priority)
         message = f"{event.job_id} priority set to P{event.priority}"

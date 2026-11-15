@@ -278,9 +278,9 @@
       {
         "time": 0.0,
         "kind": "replan",
-        "message": "Re-planned in 26.1 ms after initial_plan",
+        "message": "Re-planned in 28.3 ms after initial_plan",
         "data": {
-          "duration_ms": 26.09,
+          "duration_ms": 28.31,
           "accepted": true,
           "invariants": {
             "checked": [
@@ -289,7 +289,8 @@
               "hard_constraints",
               "every_open_job_accounted"
             ],
-            "violations": []
+            "violations": [],
+            "warnings": []
           },
           "diff": {
             "trigger": {
@@ -424,13 +425,24 @@
           },
           "messages": [
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "note",
               "phase": "situation",
               "text": "Shift start: 10 jobs to hand out. Report your status.",
               "topic": "",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "all",
+              "kind": "status",
+              "phase": "situation",
+              "text": "Road map: 9 locations, all roads open.",
+              "topic": "",
+              "data": {
+                "roads_closed": []
+              }
             },
             {
               "sender": "T1",
@@ -472,7 +484,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "note",
               "phase": "auction",
@@ -481,7 +493,7 @@
               "data": {}
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -495,7 +507,7 @@
             },
             {
               "sender": "T1",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 07:42, with 0.7 h more driving.",
@@ -509,7 +521,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a mower, this needs a sprayer.",
@@ -518,7 +530,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 07:42, with 0.7 h more driving.",
@@ -531,13 +543,26 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "T1",
               "kind": "award",
               "phase": "auction",
               "text": "J02 goes to T1: lowest added cost.",
               "topic": "J02",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "T1",
+              "kind": "route",
+              "phase": "auction",
+              "text": "Route for J02: D \u2192 F2, 2.8 km, 0.7 h.",
+              "topic": "J02",
+              "data": {
+                "route": "D \u2192 F2",
+                "km": 2.83,
+                "via_depot": false
+              }
             },
             {
               "sender": "T1",
@@ -553,7 +578,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -567,7 +592,7 @@
             },
             {
               "sender": "T1",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a sprayer, this needs a mower.",
@@ -576,7 +601,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 08:45, with 1.2 h more driving.",
@@ -590,7 +615,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a sprayer, this needs a mower.",
@@ -598,13 +623,26 @@
               "data": {}
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "T2",
               "kind": "award",
               "phase": "auction",
               "text": "J09 goes to T2: lowest added cost.",
               "topic": "J09",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "T2",
+              "kind": "route",
+              "phase": "auction",
+              "text": "Route for J09: D \u2192 F4, 5.0 km, 1.2 h.",
+              "topic": "J09",
+              "data": {
+                "route": "D \u2192 F4",
+                "km": 5.0,
+                "via_depot": false
+              }
             },
             {
               "sender": "T2",
@@ -620,7 +658,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -634,7 +672,7 @@
             },
             {
               "sender": "T1",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a sprayer, this needs a mower.",
@@ -643,7 +681,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 11:47, with 1.0 h more driving.",
@@ -657,7 +695,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a sprayer, this needs a mower.",
@@ -665,13 +703,26 @@
               "data": {}
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "T2",
               "kind": "award",
               "phase": "auction",
               "text": "J08 goes to T2: lowest added cost.",
               "topic": "J08",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "T2",
+              "kind": "route",
+              "phase": "auction",
+              "text": "Route for J08: F4 \u2192 F3, 4.1 km, 1.0 h.",
+              "topic": "J08",
+              "data": {
+                "route": "F4 \u2192 F3",
+                "km": 4.12,
+                "via_depot": false
+              }
             },
             {
               "sender": "T2",
@@ -688,7 +739,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -702,7 +753,7 @@
             },
             {
               "sender": "T1",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 10:27, with 1.2 h more driving.",
@@ -716,7 +767,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a mower, this needs a sprayer.",
@@ -725,7 +776,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 08:24, with 0.9 h more driving.",
@@ -738,13 +789,26 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "T3",
               "kind": "award",
               "phase": "auction",
               "text": "J01 goes to T3: lowest added cost.",
               "topic": "J01",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "T3",
+              "kind": "route",
+              "phase": "auction",
+              "text": "Route for J01: D \u2192 F1, 3.6 km, 0.9 h.",
+              "topic": "J01",
+              "data": {
+                "route": "D \u2192 F1",
+                "km": 3.61,
+                "via_depot": false
+              }
             },
             {
               "sender": "T3",
@@ -760,7 +824,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -774,7 +838,7 @@
             },
             {
               "sender": "T1",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 09:16, with 0.6 h more driving.",
@@ -788,7 +852,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a mower, this needs a sprayer.",
@@ -797,7 +861,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 11:10, with 1.8 h more driving.",
@@ -810,13 +874,26 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "T1",
               "kind": "award",
               "phase": "auction",
               "text": "J07 goes to T1: lowest added cost.",
               "topic": "J07",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "T1",
+              "kind": "route",
+              "phase": "auction",
+              "text": "Route for J07: F2 \u2192 F8, 2.2 km, 0.6 h.",
+              "topic": "J07",
+              "data": {
+                "route": "F2 \u2192 F8",
+                "km": 2.24,
+                "via_depot": false
+              }
             },
             {
               "sender": "T1",
@@ -833,7 +910,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -847,7 +924,7 @@
             },
             {
               "sender": "T1",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 12:11, with 1.4 h more driving.",
@@ -861,7 +938,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a mower, this needs a sprayer.",
@@ -870,7 +947,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 10:58, with 1.1 h more driving.",
@@ -883,13 +960,26 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "T3",
               "kind": "award",
               "phase": "auction",
               "text": "J03 goes to T3: lowest added cost.",
               "topic": "J03",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "T3",
+              "kind": "route",
+              "phase": "auction",
+              "text": "Route for J03: F1 \u2192 F4, 4.2 km, 1.1 h.",
+              "topic": "J03",
+              "data": {
+                "route": "F1 \u2192 F4",
+                "km": 4.24,
+                "via_depot": false
+              }
             },
             {
               "sender": "T3",
@@ -906,7 +996,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -920,7 +1010,7 @@
             },
             {
               "sender": "T1",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a sprayer, this needs a mower.",
@@ -929,7 +1019,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 15:27, with 1.7 h more driving.",
@@ -943,7 +1033,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a sprayer, this needs a mower.",
@@ -951,13 +1041,26 @@
               "data": {}
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "T2",
               "kind": "award",
               "phase": "auction",
               "text": "J10 goes to T2: lowest added cost.",
               "topic": "J10",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "T2",
+              "kind": "route",
+              "phase": "auction",
+              "text": "Route for J10: F3 \u2192 F7, 6.7 km, 1.7 h.",
+              "topic": "J10",
+              "data": {
+                "route": "F3 \u2192 F7",
+                "km": 6.71,
+                "via_depot": false
+              }
             },
             {
               "sender": "T2",
@@ -975,7 +1078,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -989,7 +1092,7 @@
             },
             {
               "sender": "T1",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 13:16, with 2.5 h more driving.",
@@ -1003,7 +1106,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a mower, this needs a sprayer.",
@@ -1012,7 +1115,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 16:16, with 3.6 h more driving.",
@@ -1025,13 +1128,26 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "T1",
               "kind": "award",
               "phase": "auction",
               "text": "J05 goes to T1: lowest added cost.",
               "topic": "J05",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "T1",
+              "kind": "route",
+              "phase": "auction",
+              "text": "Route for J05: F8 \u2192 F6, 10.0 km, 2.5 h.",
+              "topic": "J05",
+              "data": {
+                "route": "F8 \u2192 F6",
+                "km": 10.0,
+                "via_depot": false
+              }
             },
             {
               "sender": "T1",
@@ -1049,7 +1165,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -1063,7 +1179,7 @@
             },
             {
               "sender": "T1",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 12:31, with 0.4 h more driving.",
@@ -1077,7 +1193,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a mower, this needs a sprayer.",
@@ -1086,7 +1202,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 16:16, with 3.1 h more driving.",
@@ -1099,13 +1215,26 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "T1",
               "kind": "award",
               "phase": "auction",
               "text": "J04 goes to T1: lowest added cost.",
               "topic": "J04",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "T1",
+              "kind": "route",
+              "phase": "auction",
+              "text": "Route for J04: F8 \u2192 F5, 5.0 km, 1.2 h.",
+              "topic": "J04",
+              "data": {
+                "route": "F8 \u2192 F5",
+                "km": 5.0,
+                "via_depot": false
+              }
             },
             {
               "sender": "T1",
@@ -1124,7 +1253,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -1138,7 +1267,7 @@
             },
             {
               "sender": "T1",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 14:25, with 0.2 h more driving.",
@@ -1152,7 +1281,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a mower, this needs a sprayer.",
@@ -1161,7 +1290,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 13:05, with 1.1 h more driving.",
@@ -1174,13 +1303,26 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "T1",
               "kind": "award",
               "phase": "auction",
               "text": "J06 goes to T1: lowest added cost.",
               "topic": "J06",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "T1",
+              "kind": "route",
+              "phase": "auction",
+              "text": "Route for J06: F5 \u2192 F7, 3.6 km, 0.9 h.",
+              "topic": "J06",
+              "data": {
+                "route": "F5 \u2192 F7",
+                "km": 3.61,
+                "via_depot": false
+              }
             },
             {
               "sender": "T1",
@@ -1305,8 +1447,8 @@
               }
             },
             {
-              "sender": "safety_gate",
-              "to": "coordinator",
+              "sender": "safety_agent",
+              "to": "fleet_agent",
               "kind": "verdict",
               "phase": "approval",
               "text": "Checked the final plan against 4 safety rules: one tractor per job, finished work untouched, implement / fuel / deadline, no job lost. All pass. Approved.",
@@ -1317,7 +1459,7 @@
             },
             {
               "sender": "T1",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "ack",
               "phase": "approval",
               "text": "Confirmed. J02 \u2192 J04 \u2192 J06 \u2192 J05.",
@@ -1333,7 +1475,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "ack",
               "phase": "approval",
               "text": "Confirmed. J09 \u2192 J08 \u2192 J10.",
@@ -1348,7 +1490,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "ack",
               "phase": "approval",
               "text": "Confirmed. J07 \u2192 J03 \u2192 J01.",
@@ -1384,8 +1526,12 @@
               "released": [],
               "blocked_roads": 0
             },
+            "navigate": {
+              "locations": 9,
+              "roads_closed": []
+            },
             "plan": {
-              "duration_ms": 26.09,
+              "duration_ms": 28.31,
               "score": 22822.8,
               "candidates": [
                 {
@@ -1447,7 +1593,7 @@
               ]
             },
             "verify": {
-              "duration_ms": 0.07,
+              "duration_ms": 0.05,
               "accepted": true
             },
             "dispatch": {
@@ -1499,9 +1645,9 @@
       {
         "time": 2.0,
         "kind": "replan",
-        "message": "Re-planned in 5.8 ms after breakdown",
+        "message": "Re-planned in 6.9 ms after breakdown",
         "data": {
-          "duration_ms": 5.8,
+          "duration_ms": 6.87,
           "accepted": true,
           "invariants": {
             "checked": [
@@ -1510,7 +1656,8 @@
               "hard_constraints",
               "every_open_job_accounted"
             ],
-            "violations": []
+            "violations": [],
+            "warnings": []
           },
           "diff": {
             "trigger": {
@@ -1602,13 +1749,24 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "note",
               "phase": "situation",
               "text": "T1 is out. Re-opening the auction for all open work. Report your status.",
               "topic": "",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "all",
+              "kind": "status",
+              "phase": "situation",
+              "text": "Road map: 9 locations, all roads open.",
+              "topic": "",
+              "data": {
+                "roads_closed": []
+              }
             },
             {
               "sender": "T2",
@@ -1637,7 +1795,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "note",
               "phase": "auction",
@@ -1646,7 +1804,7 @@
               "data": {}
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -1660,7 +1818,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a mower, this needs a sprayer.",
@@ -1669,7 +1827,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 12:02, with 2.5 h more driving.",
@@ -1682,13 +1840,26 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "T3",
               "kind": "award",
               "phase": "auction",
               "text": "J05 goes to T3: lowest added cost.",
               "topic": "J05",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "T3",
+              "kind": "route",
+              "phase": "auction",
+              "text": "Route for J05: F8 \u2192 F6, 10.0 km, 2.5 h.",
+              "topic": "J05",
+              "data": {
+                "route": "F8 \u2192 F6",
+                "km": 10.0,
+                "via_depot": false
+              }
             },
             {
               "sender": "T3",
@@ -1704,7 +1875,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -1718,7 +1889,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 11:47, with 1.0 h more driving.",
@@ -1732,7 +1903,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a sprayer, this needs a mower.",
@@ -1740,13 +1911,26 @@
               "data": {}
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "T2",
               "kind": "award",
               "phase": "auction",
               "text": "J08 goes to T2: lowest added cost.",
               "topic": "J08",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "T2",
+              "kind": "route",
+              "phase": "auction",
+              "text": "Route for J08: F4 \u2192 F3, 4.1 km, 1.0 h.",
+              "topic": "J08",
+              "data": {
+                "route": "F4 \u2192 F3",
+                "km": 4.12,
+                "via_depot": false
+              }
             },
             {
               "sender": "T2",
@@ -1762,7 +1946,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -1776,7 +1960,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a mower, this needs a sprayer.",
@@ -1785,7 +1969,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 11:18, with 2.5 h more driving.",
@@ -1798,13 +1982,26 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "T3",
               "kind": "award",
               "phase": "auction",
               "text": "J01 goes to T3: lowest added cost.",
               "topic": "J01",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "T3",
+              "kind": "route",
+              "phase": "auction",
+              "text": "Route for J01: F8 \u2192 F1, 7.1 km, 1.8 h.",
+              "topic": "J01",
+              "data": {
+                "route": "F8 \u2192 F1",
+                "km": 7.07,
+                "via_depot": false
+              }
             },
             {
               "sender": "T3",
@@ -1821,7 +2018,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -1835,7 +2032,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a mower, this needs a sprayer.",
@@ -1844,7 +2041,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: T3 would finish J03 at 12.9h, deadline 10.0h.",
@@ -1852,7 +2049,7 @@
               "data": {}
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "no_taker",
               "phase": "auction",
@@ -1861,7 +2058,7 @@
               "data": {}
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -1875,7 +2072,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a mower, this needs a sprayer.",
@@ -1884,7 +2081,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 18:15, with 1.0 h more driving.",
@@ -1897,13 +2094,26 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "T3",
               "kind": "award",
               "phase": "auction",
               "text": "J06 goes to T3: lowest added cost.",
               "topic": "J06",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "T3",
+              "kind": "route",
+              "phase": "auction",
+              "text": "Route for J06: F6 \u2192 F7, 4.0 km, 1.0 h.",
+              "topic": "J06",
+              "data": {
+                "route": "F6 \u2192 F7",
+                "km": 4.0,
+                "via_depot": false
+              }
             },
             {
               "sender": "T3",
@@ -1921,7 +2131,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -1935,7 +2145,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "bid",
               "phase": "auction",
               "text": "I can finish it by 15:27, with 1.7 h more driving.",
@@ -1949,7 +2159,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a sprayer, this needs a mower.",
@@ -1957,13 +2167,26 @@
               "data": {}
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "T2",
               "kind": "award",
               "phase": "auction",
               "text": "J10 goes to T2: lowest added cost.",
               "topic": "J10",
               "data": {}
+            },
+            {
+              "sender": "navigation_agent",
+              "to": "T2",
+              "kind": "route",
+              "phase": "auction",
+              "text": "Route for J10: F3 \u2192 F7, 6.7 km, 1.7 h.",
+              "topic": "J10",
+              "data": {
+                "route": "F3 \u2192 F7",
+                "km": 6.71,
+                "via_depot": false
+              }
             },
             {
               "sender": "T2",
@@ -1980,7 +2203,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "announce",
               "phase": "auction",
@@ -1994,7 +2217,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: I carry a mower, this needs a sprayer.",
@@ -2003,7 +2226,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "decline",
               "phase": "auction",
               "text": "I pass: T3 would finish J04 at 18.6h (incl. refuel stop), deadline 12.0h.",
@@ -2011,7 +2234,7 @@
               "data": {}
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "no_taker",
               "phase": "auction",
@@ -2021,7 +2244,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "trade",
               "phase": "negotiation",
               "text": "I give J01 back to the pool and take J03 instead: worth more. The plan gets better by 0 points.",
@@ -2042,7 +2265,7 @@
               }
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "flag",
               "phase": "approval",
@@ -2051,7 +2274,7 @@
               "data": {}
             },
             {
-              "sender": "coordinator",
+              "sender": "fleet_agent",
               "to": "all",
               "kind": "flag",
               "phase": "approval",
@@ -2060,8 +2283,8 @@
               "data": {}
             },
             {
-              "sender": "safety_gate",
-              "to": "coordinator",
+              "sender": "safety_agent",
+              "to": "fleet_agent",
               "kind": "verdict",
               "phase": "approval",
               "text": "Checked the final plan against 4 safety rules: one tractor per job, finished work untouched, implement / fuel / deadline, no job lost. All pass. Approved.",
@@ -2072,7 +2295,7 @@
             },
             {
               "sender": "T2",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "ack",
               "phase": "approval",
               "text": "Confirmed. Finishing J09, then J08 \u2192 J10.",
@@ -2086,7 +2309,7 @@
             },
             {
               "sender": "T3",
-              "to": "coordinator",
+              "to": "fleet_agent",
               "kind": "ack",
               "phase": "approval",
               "text": "Confirmed. Finishing J07, then J03 \u2192 J05 \u2192 J06.",
@@ -2124,8 +2347,12 @@
               ],
               "blocked_roads": 0
             },
+            "navigate": {
+              "locations": 9,
+              "roads_closed": []
+            },
             "plan": {
-              "duration_ms": 5.8,
+              "duration_ms": 6.87,
               "score": 10880.5,
               "candidates": [
                 {

@@ -99,7 +99,7 @@ export interface AgentMessage {
 export interface ReplanData {
   duration_ms: number
   accepted: boolean
-  invariants: { checked: string[]; violations: string[] }
+  invariants: { checked: string[]; violations: string[]; warnings?: string[] }
   diff: { trigger: Record<string, string | number>; time: number; changes: JobChange[] }
   trace: ReplanTrace
   messages: AgentMessage[]
@@ -145,6 +145,8 @@ export interface SessionView {
   scenario: string
   runs: Record<Strategy, RunSnapshot>
   explanations: Record<string, Explanation>
+  /** Faults that will arrive by themselves on the simulation clock. */
+  scheduled_faults: { tractor_id: string; at: number }[]
 }
 
 export interface MapInfo {
@@ -162,7 +164,7 @@ export interface ProposedEvent {
   job_id?: string
   priority?: number
   /** Who raised it; the copilot's proposals are tagged so the trace can show it. */
-  source?: 'operator' | 'copilot'
+  source?: 'operator' | 'copilot' | 'telemetry'
 }
 
 export interface WhyFacts {

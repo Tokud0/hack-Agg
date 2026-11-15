@@ -157,7 +157,7 @@ export default function App() {
             replan: replanPanel,
             chat: <Copilot />,
             jobs: <JobsTool fields={map.fields.map((f) => f.id)} nowHours={coord.time} />,
-            events: <EventsTool tractors={coord.tractors} jobs={coord.jobs} nodes={nodes} />,
+            events: <EventsTool tractors={coord.tractors} jobs={coord.jobs} nodes={nodes} scheduledFaults={session.scheduled_faults ?? []} />,
           }} />
       </div>
 

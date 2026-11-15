@@ -4,11 +4,12 @@ import type { Explanation, LogEntry, ReplanTrace } from '../../types'
 import { describeTrigger } from '../../labels'
 import { ArrowRightIcon } from '../Icons'
 
-type AgentKind = 'human' | 'llm' | 'search' | 'code' | 'rules'
+type AgentKind = 'human' | 'sensor' | 'llm' | 'search' | 'code' | 'rules'
 type Tone = 'ok' | 'bad' | 'pending'
 
 const KIND: Record<AgentKind, { label: string; cls: string }> = {
   human: { label: 'Human + LLM', cls: 'bg-white/10 text-white/70' },
+  sensor: { label: 'Tractor telemetry', cls: 'bg-alarm/15 text-alarm' },
   llm: { label: 'LLM', cls: 'bg-wheat/15 text-wheat' },
   search: { label: 'Deterministic search', cls: 'bg-leaf/15 text-leaf' },
   code: { label: 'Deterministic code', cls: 'bg-leaf/15 text-leaf' },
@@ -32,6 +33,7 @@ interface Stage {
 function describeSource(trigger: Record<string, string | number>): string {
   if (trigger.type === 'initial_plan') return 'scheduled by the system'
   if (trigger.source === 'copilot') return 'proposed by the copilot, confirmed by the operator'
+  if (trigger.source === 'telemetry') return 'reported by the tractor itself, no operator action'
   return 'reported by the operator'
 }
 
@@ -44,13 +46,14 @@ function buildStages(entry: LogEntry, trace: ReplanTrace, explanation?: Explanat
   const violations = entry.data.invariants?.violations.length ?? 0
   const checks = entry.data.invariants?.checked.length ?? 0
   const isAccepted = trace.verify.accepted
+  const isTelemetry = trigger.source === 'telemetry'
   const closed = trace.navigate.roads_closed
   const changed = trace.dispatch.jobs_changed
   return [
     {
-      name: 'Intake', kind: 'human', role: 'Turns a report into a typed event',
+      name: 'Intake', kind: isTelemetry ? 'sensor' : 'human', role: 'Turns a report into a typed event',
       result: describeTrigger(trigger), meta: describeSource(trigger), tone: 'ok',
-      limit: 'Can only propose. A human confirms.',
+      limit: isTelemetry ? 'A validated fault is acted on at once. Nobody has to click.' : 'Chat can only propose. A human confirms.',
     },
     {
       name: 'Navigation Agent', kind: 'code', role: 'Plans routes and travel times between fields',

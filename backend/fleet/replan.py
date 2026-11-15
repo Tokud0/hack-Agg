@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, replace
 
-from .coordinator import Candidate, plan_with_trace
+from .coordinator import Candidate, ObserverFactory, SearchObserver, plan_with_trace
 from .invariants import InvariantReport, check_plan
 from .models import Job, JobStatus, Plan, TractorStatus, World
 from .routing import RoadNetwork, build_network
@@ -21,6 +21,8 @@ class ReplanResult:
     duration_ms: float
     verify_ms: float = 0.0
     candidates: tuple[Candidate, ...] = ()
+    # What watched the winning candidate while the planner built it, when observers were attached.
+    observer: SearchObserver | None = None
 
 
 @dataclass(frozen=True)
@@ -55,19 +57,21 @@ def apply_plan(world: World, plan: Plan) -> World:
     return replace(world, tractors=tractors, jobs=jobs)
 
 
-def replan(world: World, network: RoadNetwork | None = None) -> ReplanResult:
+def replan(
+    world: World, network: RoadNetwork | None = None, new_observer: ObserverFactory | None = None
+) -> ReplanResult:
     """Run the coordinator; keep the previous plan if invariants fail."""
     network = network or build_network(world)
     previous = current_plan(world)
     started = time.perf_counter()
-    new_plan, candidates = plan_with_trace(world, network)
+    new_plan, candidates, observer = plan_with_trace(world, network, new_observer=new_observer)
     planned = time.perf_counter()
     report = check_plan(world, new_plan, network)
     duration_ms = (planned - started) * 1000
     verify_ms = (time.perf_counter() - planned) * 1000
     if not report.ok:
-        return ReplanResult(world, previous, previous, report, False, duration_ms, verify_ms, candidates)
-    return ReplanResult(apply_plan(world, new_plan), new_plan, previous, report, True, duration_ms, verify_ms, candidates)
+        return ReplanResult(world, previous, previous, report, False, duration_ms, verify_ms, candidates, observer)
+    return ReplanResult(apply_plan(world, new_plan), new_plan, previous, report, True, duration_ms, verify_ms, candidates, observer)
 
 
 def fault_test(world: World, network: RoadNetwork | None = None) -> FaultTest | None:
@@ -114,6 +118,37 @@ def break_tractor(world: World, tractor_id: str) -> World:
 
 def block_road(world: World, a: str, b: str) -> World:
     return replace(world, blocked_roads=world.blocked_roads | {frozenset((a, b))})
+
+
+def on_closed_stretch(world: World, tractor_id: str, a: str, b: str) -> bool:
+    """True when the tractor has already driven onto the road a–b and is between its ends."""
+    tractor = world.tractors[tractor_id]
+    if not tractor.path or frozenset((tractor.node, tractor.path[0])) != frozenset((a, b)):
+        return False
+    return (tractor.x, tractor.y) != world.node_position(tractor.node)
+
+
+def reroute_in_transit(world: World, network: RoadNetwork) -> World:
+    """Give every driving tractor a route on the current road map.
+
+    Policy for a road that closes under a tractor: it finishes the stretch it is already on
+    (it cannot turn round mid-road), and everything after that stretch is re-routed. A tractor
+    that has not left its node yet is re-routed from that node.
+    """
+    tractors = {}
+    for tid, tractor in world.tractors.items():
+        if not tractor.path or tractor.status == TractorStatus.BROKEN:
+            tractors[tid] = tractor
+            continue
+        target = tractor.path[-1]
+        at_node = (tractor.x, tractor.y) == world.node_position(tractor.node)
+        origin = tractor.node if at_node else tractor.path[0]
+        onward = network.path(origin, target)
+        if origin != target and not onward:  # no way round: keep the old route rather than strand it
+            tractors[tid] = tractor
+            continue
+        tractors[tid] = replace(tractor, path=onward if at_node else (origin, *onward))
+    return replace(world, tractors=tractors)
 
 
 def change_priority(world: World, job_id: str, priority: int) -> World:

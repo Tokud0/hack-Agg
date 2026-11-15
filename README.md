@@ -55,13 +55,15 @@ Inside the Fleet Agent's step every tractor has its own agent (`backend/fleet/ag
 3. **Negotiation**: tractors trade or swap jobs whenever that improves the whole plan.
 4. **Approval**: the Safety Agent approves or vetoes; tractors confirm their queues.
 
-The messages are recorded by observing the planner, not written after the fact: a test rebuilds the final plan from the claims and trades alone, and another checks every award went to the lowest bid. Bids are computed by the same feasibility code as the plan, so the benchmark is unchanged. The LLM takes no decisions here; on the Agents page you can pick one tractor and ask its agent a question, and the LLM answers in first person from that agent's own messages (`POST /api/agents/{id}/ask`).
+What this is and is not: the Fleet Agent is one deterministic search, not a set of separate processes. The tractor agents' messages are a **recorded trace** of that search, written down by an observer while the search runs (`agents.Recorder`), not an LLM dialogue and not a story told afterwards. A test rebuilds the final plan from the claims and trades alone, another checks every award went to the lowest bid, and switching the recorder off changes neither the plan nor the benchmark. The LLM takes no decisions here; on the Agents page you can pick one tractor and ask its agent a question, and the LLM answers in first person from what that agent said and heard in the round you selected (`POST /api/agents/{id}/ask`).
+
+**Recovery without a click**: besides the operator's buttons and the chat, a fault can arrive on its own, as tractor telemetry would report it (Events tab, *Hands-off test*, or `POST /api/events/schedule`). It fires on the simulation clock, the fleet re-plans and the trace marks the event as raised by the tractor itself.
 
 The **Agents** page shows this for any re-plan: the full conversation (filter by agent), what triggered it and who raised it, every auction round with its score before and after trading, the checks, who got which job, the explanation, and the time each step took. *Test the Safety Agent* hands it a deliberately corrupted copy of the live plan (`POST /api/orchestration/fault-test`) and shows the veto; the live plan is not touched.
 
 ```bash
 cd backend
-.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 61 tests
+.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 72 tests
 .venv/bin/python -m scripts.benchmark --n 50       # coordinator vs baseline table
 .venv/bin/python -m scripts.export_demo            # writes results/
 ```
@@ -98,7 +100,8 @@ Demo scenario, with T1 breaking down at 08:00: the coordinator completes 8 jobs,
 2. **Score and assign** (`coordinator.py`): jobs are sorted by priority, then deadline. Each one goes into the cheapest feasible slot across all queues. The objective is lexicographic: priority-weighted completed work first, then travel, completion time, and time a tractor would wait while another tractor with the same implement still has work queued.
 3. **Improve**: multi-start. Several starting plans (by priority, by deadline, by slack, an EDF schedule, and fixed-seed shuffles) are each improved by local search (relocate, swap, insert-unassigned, eject-and-insert) with a fixed iteration cap, and the best one wins. The search is deterministic.
 4. **Re-plan on an event** (`replan.py`): completed work is frozen, jobs currently in progress on healthy tractors stay pinned, the finished share of an interrupted job is kept, and everything else is planned again.
-5. **Verify** (`invariants.py`): each job has at most one tractor; completed work is never reassigned; every queue satisfies implement, fuel and deadline; every unfinished job is either planned or marked unassignable with a reason.
+5. **Verify** (`invariants.py`): each job has at most one tractor, counting work in progress, and the job agrees who holds it; completed work is never reassigned; work in progress and every queue satisfy implement, fuel and deadline; every unfinished job is either planned or marked unassignable with a reason. Work already in progress that will finish late is reported as a warning rather than a veto, because no new plan can fix it.
+6. **Road closing under a tractor** (`replan.reroute_in_transit`): a tractor already on the closed stretch finishes it, since it cannot turn round mid-road; every later leg, and every tractor that has not left its node, is re-routed.
 
 **Baseline rules** (`baseline.py`): whenever a tractor is free, it takes the first pending job it can feasibly do right now, either in submission order (FCFS) or by earliest deadline (EDF). There is no lookahead. Work released by a breakdown goes back to the pool with its progress kept.
 

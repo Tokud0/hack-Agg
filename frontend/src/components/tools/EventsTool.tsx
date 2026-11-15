@@ -13,6 +13,7 @@ interface EventsToolProps {
   tractors: Tractor[]
   jobs: Job[]
   nodes: string[]
+  scheduledFaults: { tractor_id: string; at: number }[]
 }
 
 const KIND_LABEL: Record<Kind, string> = {
@@ -65,7 +66,13 @@ function ForecastCard({ result }: { result: WhatIfResult }) {
   )
 }
 
-export function EventsTool({ tractors, jobs, nodes }: EventsToolProps) {
+const FAULT_DELAYS = [
+  { hours: 0.5, label: '30 min' },
+  { hours: 1, label: '1 h' },
+  { hours: 2, label: '2 h' },
+]
+
+export function EventsTool({ tractors, jobs, nodes, scheduledFaults }: EventsToolProps) {
   const healthy = tractors.filter((t) => t.status !== 'broken')
   const openJobs = jobs.filter((j) => j.status !== 'done')
   const [kind, setKind] = useState<Kind>('breakdown')
@@ -101,6 +108,18 @@ export function EventsTool({ tractors, jobs, nodes }: EventsToolProps) {
       await api.event(event)
       setForecast(null)
       setMessage({ ok: true, text: `${describeEvent(event)}. The coordinator re-planned.` })
+    } catch (err) {
+      setMessage({ ok: false, text: errorText(err) })
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
+  const schedule = async (delayHours: number) => {
+    setIsBusy(true)
+    try {
+      const res = await api.scheduleFault(tractorId, delayHours)
+      setMessage({ ok: true, text: `Scheduled: ${tractorId} fails at ${clock(res.at)} without any click.` })
     } catch (err) {
       setMessage({ ok: false, text: errorText(err) })
     } finally {
@@ -155,6 +174,25 @@ export function EventsTool({ tractors, jobs, nodes }: EventsToolProps) {
           <BoltIcon size={12} />Apply now
         </button>
       </div>
+
+      {kind === 'breakdown' && (
+        <div className="rounded-lg border border-white/8 bg-black/20 p-2.5">
+          <div className="text-[12px] font-bold text-white/85">Hands-off test</div>
+          <p className="mt-0.5 text-[11.5px] leading-snug text-white/50">Let the fault arrive by itself, as the tractor&apos;s telemetry would report it. Nobody clicks when it happens; the fleet re-plans on its own.</p>
+          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+            <span className="text-[11.5px] text-white/50">{tractorId} fails in</span>
+            {FAULT_DELAYS.map((d) => (
+              <button type="button" key={d.hours} onClick={() => schedule(d.hours)} disabled={isBusy || !tractorId}
+                className="rounded-md border border-alarm/40 px-2 py-1 text-[11.5px] font-semibold text-alarm hover:bg-alarm/15 disabled:opacity-40">{d.label}</button>
+            ))}
+          </div>
+          {scheduledFaults.map((f) => (
+            <div key={`${f.tractor_id}-${f.at}`} className="mt-1.5 flex items-center gap-1.5 text-[11.5px] text-wheat">
+              <span className="blink">●</span>{f.tractor_id} will fail at {clock(f.at)}. Press Run and watch.
+            </div>
+          ))}
+        </div>
+      )}
 
       {isBusy && <div className="blink text-xs text-white/40">● simulating…</div>}
       {message && <div className={`rounded-md px-2.5 py-1.5 text-[12px] ${message.ok ? 'bg-leaf/10 text-leaf' : 'bg-alarm/10 text-alarm'}`}>{message.text}</div>}

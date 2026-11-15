@@ -81,7 +81,7 @@ class EventRequest(BaseModel):
     b: str | None = None
     job_id: str | None = None
     priority: int | None = Field(default=None, ge=1, le=3)
-    source: Literal["operator", "copilot"] = "operator"
+    source: Literal["operator", "copilot"] = "operator"  # "telemetry" is set by the server only
 
 
 class ChatTurn(BaseModel):
@@ -161,6 +161,22 @@ async def post_event(body: EventRequest) -> dict:
     return {"ok": True, "replan": last.data if last.kind == "replan" else None}
 
 
+class ScheduledFaultIn(BaseModel):
+    tractor_id: str
+    delay_hours: float = Field(gt=0, le=6)
+
+
+@app.post("/api/events/schedule")
+async def schedule_fault(body: ScheduledFaultIn) -> dict:
+    """Nobody clicks when it happens: the fault arrives on the clock and the fleet recovers by itself."""
+    async with session().lock:
+        try:
+            at = session().schedule_fault(body.tractor_id, body.delay_hours)
+        except (ValueError, KeyError) as exc:
+            raise HTTPException(422, str(exc)) from exc
+    return {"ok": True, "at": at}
+
+
 @app.get("/api/why/{job_id}")
 async def why(job_id: str, question: str | None = None) -> dict:
     run = session().runs["coordinator"]
@@ -221,12 +237,14 @@ async def what_if(body: EventRequest) -> dict:
 
 class AgentQuestionIn(BaseModel):
     question: str = Field(min_length=1, max_length=300)
+    # Log index of the planning round the question is about; the latest round when omitted.
+    replan_index: int | None = Field(default=None, ge=0)
 
 
 @app.post("/api/agents/{tractor_id}/ask")
 async def ask_agent(tractor_id: str, body: AgentQuestionIn) -> dict:
     try:
-        facts = session().agent_facts(tractor_id)
+        facts = session().agent_facts(tractor_id, body.replan_index)
     except KeyError as exc:
         raise HTTPException(404, str(exc.args[0])) from exc
     answer, source = await asyncio.to_thread(ask_tractor, facts, body.question)

@@ -50,7 +50,8 @@ class EventIn(BaseModel):
     b: str | None = None
     job_id: str | None = None
     priority: int | None = None
-    # Who raised it: "operator" (button) or "copilot" (LLM proposal the operator confirmed).
+    # Who raised it: "operator" (button), "copilot" (LLM proposal the operator confirmed)
+    # or "telemetry" (the tractor reported the fault itself; nobody clicked).
     source: str | None = None
 
 

@@ -55,6 +55,7 @@ class Session:
         }
         if all(engine.finished(r) for r in self.runs.values()):
             self.running = False
+        self.schedule_explanations()  # a scheduled fault may have just fired and re-planned
 
     # --- events ------------------------------------------------------------
 
@@ -64,6 +65,19 @@ class Session:
         event = event.model_copy(update={"at": coordinator.world.time})
         self.runs = {name: engine.apply_event(run, event) for name, run in self.runs.items()}
         self.schedule_explanations()
+
+    def schedule_fault(self, tractor_id: str, delay_hours: float) -> float:
+        """A fault that arrives by itself, as tractor telemetry would report it. Returns its time."""
+        coordinator = self.runs["coordinator"]
+        event = EventIn(at=0, type="breakdown", tractor_id=tractor_id)
+        _validate_event(coordinator, event)
+        at = round(coordinator.world.time + delay_hours, 2)
+        fault = event.model_copy(update={"at": at, "source": "telemetry"})
+        self.runs = {
+            name: replace(run, pending_events=tuple(sorted((*run.pending_events, fault), key=lambda e: e.at)))
+            for name, run in self.runs.items()
+        }
+        return at
 
     def add_job(self, job_type: str, field_id: str, priority: int, deadline: float, work_hours: float) -> str:
         world = self.runs["coordinator"].world
@@ -131,6 +145,9 @@ class Session:
             "scenario": self.scenario.name,
             "runs": {name: snapshot(run) for name, run in self.runs.items()},
             "explanations": {str(k): v for k, v in self.explanations.items()},
+            "scheduled_faults": [
+                {"tractor_id": e.tractor_id, "at": e.at} for e in self.runs["coordinator"].pending_events
+            ],
         }
 
     def map_view(self) -> dict:
@@ -140,18 +157,36 @@ class Session:
             "shift_start_hour": self.scenario.shift_start_hour,
         }
 
-    def agent_facts(self, tractor_id: str) -> dict:
-        """What one tractor agent knows: its status and its side of the last planning round."""
+    def agent_facts(self, tractor_id: str, replan_index: int | None = None) -> dict:
+        """What one tractor agent knows: its current status and what it said and heard in one
+        planning round (the latest, or the round at `replan_index` in the log)."""
         run = self.runs["coordinator"]
         if tractor_id not in run.world.tractors:
             raise KeyError(f"unknown tractor {tractor_id}")
-        last = next((e for e in reversed(run.log) if e.kind == "replan"), None)
+        if replan_index is None:
+            entry = next((e for e in reversed(run.log) if e.kind == "replan"), None)
+        else:
+            entry = run.log[replan_index] if 0 <= replan_index < len(run.log) else None
+            if entry is None or entry.kind != "replan":
+                raise KeyError(f"log entry {replan_index} is not a planning round")
+        heard = entry.data.get("messages", []) if entry else []
+        own_topics = {m["topic"] for m in heard if tractor_id in (m["sender"], m["to"]) and m["topic"]}
+
+        def concerns_it(m: dict) -> bool:
+            if tractor_id in (m["sender"], m["to"]):
+                return True
+            return m["to"] == "all" and (m["phase"] == "situation" or m["topic"] in own_topics)
+
         messages = [
             {"from": m["sender"], "to": m["to"], "kind": m["kind"], "job": m["topic"], "text": m["text"]}
-            for m in (last.data.get("messages", []) if last else [])
-            if tractor_id in (m["sender"], m["to"])
+            for m in heard if concerns_it(m)
         ]
-        return {"tractor_id": tractor_id, "status": self.copilot_state()["tractors"][tractor_id], "messages": messages}
+        return {
+            "tractor_id": tractor_id,
+            "status_now": self.copilot_state()["tractors"][tractor_id],
+            "round_time_h": entry.time if entry else None,
+            "messages": messages,
+        }
 
     def copilot_state(self) -> dict:
         world = self.runs["coordinator"].world

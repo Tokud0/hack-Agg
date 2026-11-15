@@ -301,3 +301,14 @@ def test_broken_tractor_announces_release_and_stays_out_of_the_auction(world):
     assert not [m for m in messages if m.sender == "T1" and m.kind in ("bid", "decline", "ack")]
     assert _replay_queues(messages).get("T3", ()) == result.plan.queues["T3"]
     assert messages[-1].kind == "ack" and any(m.kind == "verdict" and m.data["accepted"] for m in messages)
+
+
+def test_navigation_agent_reports_the_detour_and_routes_the_winners(world):
+    planned = replan(world).world
+    blocked = block_road(planned, "F4", "F6")
+    _, messages = _conversation(blocked, {"type": "block_road", "a": "F4", "b": "F6"})
+    alert = messages[0]
+    assert alert.sender == "navigation_agent" and "Detour: F4" in alert.text
+    awards = [m for m in messages if m.kind == "award"]
+    routes = [m for m in messages if m.kind == "route"]
+    assert len(routes) == len(awards) and all(m.sender == "navigation_agent" for m in routes)

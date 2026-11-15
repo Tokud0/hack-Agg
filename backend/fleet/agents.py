@@ -1,9 +1,12 @@
 """Agent conversation: the plan search, told as messages between tractor agents.
 
-Each tractor agent answers only for itself. The coordinator announces a job, every tractor replies
-with a bid or the reason it cannot take it, the best bid wins and the winner claims the job so no
-one else plans for it. Tractors then trade jobs whenever that improves the plan, and the safety
-gate approves or vetoes the result.
+The agents follow ATC's suggested architecture: a Fleet Agent that assigns jobs, a Navigation Agent
+that plans routes, a Safety Agent that checks the plan, plus one agent per tractor.
+
+Each tractor agent answers only for itself. The Fleet Agent announces a job, every tractor replies
+with a bid or the reason it cannot take it, the best bid wins, the Navigation Agent gives the winner
+its route and the winner claims the job so no one else plans for it. Tractors then trade jobs
+whenever that improves the plan, and the Safety Agent approves or vetoes the result.
 
 Nothing here decides anything: the messages are recorded by observing the planner
 (`coordinator.replay_winner`), and every number in a bid comes from the same feasibility code.
@@ -11,6 +14,7 @@ Nothing here decides anything: the messages are recorded by observing the planne
 
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass, field
 
 from .coordinator import (
@@ -27,8 +31,9 @@ from .models import TractorStatus, World
 from .replan import ReplanResult
 from .routing import RoadNetwork
 
-COORDINATOR = "coordinator"
-SAFETY_GATE = "safety_gate"
+FLEET_AGENT = "fleet_agent"
+NAVIGATION_AGENT = "navigation_agent"
+SAFETY_AGENT = "safety_agent"
 EVERYONE = "all"
 SHIFT_START_HOUR = 6.0
 AWARD_REASON: dict[str, str] = {"cheapest": "lowest added cost", "soonest": "soonest finish"}
@@ -38,7 +43,7 @@ AWARD_REASON: dict[str, str] = {"cheapest": "lowest added cost", "soonest": "soo
 class Message:
     sender: str
     to: str
-    kind: str  # note | alert | status | announce | bid | decline | award | claim | no_taker | trade | agree | flag | verdict | ack
+    kind: str  # note | alert | status | announce | bid | decline | award | route | claim | no_taker | trade | agree | flag | verdict | ack
     phase: str  # situation | auction | negotiation | approval
     text: str
     topic: str = ""  # the job (or jobs) the message is about
@@ -70,28 +75,51 @@ def _jobs(ids) -> str:
 # --- situation: who is where, what just happened -----------------------------
 
 
-def _trigger_messages(world: World, trigger: dict, released: dict[str, str]) -> list[Message]:
+def _route(network: RoadNetwork, start: str, end: str) -> str:
+    return " → ".join((start, *network.path(start, end)))
+
+
+def _detour(world: World, network: RoadNetwork, a: str, b: str) -> str:
+    if not network.path(a, b):
+        return "There is no way around it."
+    (ax, ay), (bx, by) = world.node_position(a), world.node_position(b)
+    return f"Detour: {_route(network, a, b)}, {network.distance(a, b):.1f} km instead of {math.hypot(ax - bx, ay - by):.1f} km."
+
+
+def _road_map_message(world: World) -> Message:
+    closed = sorted("–".join(sorted(road)) for road in world.blocked_roads)
+    state = f"closed: {', '.join(closed)}. Travel times already include the detours" if closed else "all roads open"
+    return Message(NAVIGATION_AGENT, EVERYONE, "status", "situation", f"Road map: {len(world.node_ids())} locations, {state}.",
+                   data={"roads_closed": closed})
+
+
+def _trigger_messages(world: World, network: RoadNetwork, trigger: dict, released: dict[str, str]) -> list[Message]:
     kind = trigger.get("type")
     if kind == "initial_plan":
         open_jobs = sum(1 for j in world.jobs.values() if j.status.value != "done")
-        return [Message(COORDINATOR, EVERYONE, "note", "situation", f"Shift start: {open_jobs} jobs to hand out. Report your status.")]
+        return [Message(FLEET_AGENT, EVERYONE, "note", "situation", f"Shift start: {open_jobs} jobs to hand out. Report your status.")]
     if kind == "breakdown":
         tid = str(trigger["tractor_id"])
         gave_up = f"I release {_jobs(sorted(released))}." if released else "I had no work queued."
         return [
             Message(tid, EVERYONE, "alert", "situation", f"I have broken down near {world.tractors[tid].node}. {gave_up}",
                     data={"released": sorted(released)}),
-            Message(COORDINATOR, EVERYONE, "note", "situation", f"{tid} is out. Re-opening the auction for all open work. Report your status."),
+            Message(FLEET_AGENT, EVERYONE, "note", "situation", f"{tid} is out. Re-opening the auction for all open work. Report your status."),
         ]
     if kind == "block_road":
-        text = f"Road {trigger['a']}–{trigger['b']} is closed, routes have changed."
-    elif kind == "change_priority":
+        a, b = str(trigger["a"]), str(trigger["b"])
+        return [
+            Message(NAVIGATION_AGENT, EVERYONE, "alert", "situation", f"Road {a}–{b} is closed. {_detour(world, network, a, b)}",
+                    data={"road": [a, b]}),
+            Message(FLEET_AGENT, EVERYONE, "note", "situation", "Routes have changed. Re-opening the auction for all open work. Report your status."),
+        ]
+    if kind == "change_priority":
         text = f"{trigger['job_id']} is now priority P{trigger['priority']}."
     elif kind == "add_job":
         text = f"New job {trigger['job_id']} on {trigger['field_id']} (P{trigger['priority']})."
     else:
         text = f"Event: {kind}."
-    return [Message(COORDINATOR, EVERYONE, "alert", "situation", f"{text} Re-opening the auction for all open work. Report your status.")]
+    return [Message(FLEET_AGENT, EVERYONE, "alert", "situation", f"{text} Re-opening the auction for all open work. Report your status.")]
 
 
 def _status_message(world: World, tractor_id: str) -> Message:
@@ -108,9 +136,13 @@ def _status_message(world: World, tractor_id: str) -> Message:
                    data={"node": t.node, "fuel": round(t.fuel), "current_job": t.current_job})
 
 
-def situation(world: World, trigger: dict, released: dict[str, str]) -> list[Message]:
+def situation(world: World, network: RoadNetwork, trigger: dict, released: dict[str, str]) -> list[Message]:
     working = [tid for tid in sorted(world.tractors) if world.tractors[tid].status != TractorStatus.BROKEN]
-    return [*_trigger_messages(world, trigger, released), *(_status_message(world, tid) for tid in working)]
+    return [
+        *_trigger_messages(world, network, trigger, released),
+        _road_map_message(world),
+        *(_status_message(world, tid) for tid in working),
+    ]
 
 
 # --- auction and negotiation: recorded from the planner ----------------------
@@ -156,7 +188,7 @@ class _Recorder:
     def on_award(self, job_id: str, queues: Queues, winner: str | None, rule: AwardRule) -> None:
         job = self.inp.world.jobs[job_id]
         say = self.auction.append
-        say(Message(COORDINATOR, EVERYONE, "announce", "auction", topic=job_id,
+        say(Message(FLEET_AGENT, EVERYONE, "announce", "auction", topic=job_id,
                     text=f"Who takes {job_id}? {job.type.capitalize()} on {job.field_id}, P{job.priority}, "
                          f"{job.remaining_hours:.1f} h of work, due {clock(job.deadline)}.",
                     data={"field_id": job.field_id, "priority": job.priority, "deadline": job.deadline}))
@@ -164,20 +196,38 @@ class _Recorder:
         for tractor in self.inp.tractors:
             bid = make_bid(self.inp, queues, tractor.id, job_id, rule)
             if not bid.ok:
-                say(Message(tractor.id, COORDINATOR, "decline", "auction", f"I pass: {bid.reason}.", job_id))
+                say(Message(tractor.id, FLEET_AGENT, "decline", "auction", f"I pass: {bid.reason}.", job_id))
                 continue
             is_winner = tractor.id == winner
             winning_queue = bid.queue if is_winner else winning_queue
-            say(Message(tractor.id, COORDINATOR, "bid", "auction", topic=job_id,
+            say(Message(tractor.id, FLEET_AGENT, "bid", "auction", topic=job_id,
                         text=f"I can finish it by {clock(bid.finish)}, with {bid.extra_travel:.1f} h more driving.",
                         data={"value": round(bid.value, 2), "finish": round(bid.finish, 2),
                               "extra_travel": round(bid.extra_travel, 2), "is_winner": is_winner}))
         if winner is None:
-            say(Message(COORDINATOR, EVERYONE, "no_taker", "auction", f"No one can take {job_id} right now. It stays in the pool.", job_id))
+            say(Message(FLEET_AGENT, EVERYONE, "no_taker", "auction", f"No one can take {job_id} right now. It stays in the pool.", job_id))
             return
-        say(Message(COORDINATOR, winner, "award", "auction", f"{job_id} goes to {winner}: {AWARD_REASON[rule]}.", job_id))
+        say(Message(FLEET_AGENT, winner, "award", "auction", f"{job_id} goes to {winner}: {AWARD_REASON[rule]}.", job_id))
+        say(self._route_message(winner, winning_queue, job_id))
         say(Message(winner, EVERYONE, "claim", "auction", f"{job_id} is mine. Nobody else needs to plan for it.", job_id,
                     data={"queue": list(winning_queue)}))
+
+    def _route_message(self, tractor_id: str, queue: tuple[str, ...], job_id: str) -> Message:
+        """The Navigation Agent's route for the leg that brings the winner to its new job."""
+        inp = self.inp
+        tractor = next(t for t in inp.tractors if t.id == tractor_id)
+        position = queue.index(job_id)
+        origin = inp.world.jobs[queue[position - 1]].field_id if position else inp.starts[tractor_id].node
+        target = inp.world.jobs[job_id].field_id
+        via_depot = job_id in _eval(inp, tractor, queue).refuel_stops
+        stops = (origin, inp.world.depot.id, target) if via_depot else (origin, target)
+        legs = list(zip(stops, stops[1:]))
+        route = " → ".join((origin, *(node for a, b in legs for node in inp.network.path(a, b))))
+        km = sum(inp.network.distance(a, b) for a, b in legs)
+        refuel = ", refuelling at the depot on the way" if via_depot else ""
+        text = "Already on the field, no driving needed." if km == 0 else f"Route for {job_id}: {route}, {km:.1f} km, {km / tractor.speed:.1f} h{refuel}."
+        return Message(NAVIGATION_AGENT, tractor_id, "route", "auction", text, job_id,
+                       data={"route": route, "km": round(km, 2), "via_depot": via_depot})
 
     def on_trade(self, before: Queues, after: Queues, gain: float) -> None:
         old, new = _owners(before), _owners(after)
@@ -194,7 +244,7 @@ class _Recorder:
             say(tid, EVERYONE, "trade", f"I am reordering my own queue to {' → '.join(after[tid])}. {better}", data)
         elif len(moved) == 1 and moved[0][1] is None:
             jid, _, taker = moved[0]
-            say(taker, COORDINATOR, "trade", f"I found room for {jid} after all. {better}", data)
+            say(taker, FLEET_AGENT, "trade", f"I found room for {jid} after all. {better}", data)
         elif len(moved) == 1:
             jid, giver, taker = moved[0]
             say(taker, giver, "trade", f"Hand me {jid}, it fits my route better. {better}")
@@ -207,16 +257,16 @@ class _Recorder:
             taken = [jid for jid, _, b in moved if b]
             dropped = [jid for jid, _, b in moved if b is None]
             tid = next(b for _, _, b in moved if b)
-            say(tid, COORDINATOR, "trade", f"I give {_jobs(dropped)} back to the pool and take {_jobs(taken)} instead: worth more. {better}", data)
+            say(tid, FLEET_AGENT, "trade", f"I give {_jobs(dropped)} back to the pool and take {_jobs(taken)} instead: worth more. {better}", data)
 
 
 def negotiation(inp: PlanningInput, candidates: tuple[Candidate, ...]) -> list[Message]:
     winner = next((c for c in candidates if c.is_winner), None)
     if winner is None:
-        return [Message(COORDINATOR, EVERYONE, "note", "auction", "No open job can be handed out right now.")]
+        return [Message(FLEET_AGENT, EVERYONE, "note", "auction", "No open job can be handed out right now.")]
     recorder = _Recorder(inp)
     replay_winner(inp, candidates, recorder.on_award, recorder.on_trade)
-    intro = Message(COORDINATOR, EVERYONE, "note", "auction",
+    intro = Message(FLEET_AGENT, EVERYONE, "note", "auction",
                     f"I ran this auction {len(candidates)} times, announcing the jobs in a different order each time. "
                     f"Best outcome: \"{winner.name}\". This is that round.")
     return [intro, *recorder.auction, *recorder.trades]
@@ -228,13 +278,13 @@ def negotiation(inp: PlanningInput, candidates: tuple[Candidate, ...]) -> list[M
 def approval(result: ReplanResult) -> list[Message]:
     report = result.report
     if not result.accepted:
-        return [Message(SAFETY_GATE, COORDINATOR, "verdict", "approval",
+        return [Message(SAFETY_AGENT, FLEET_AGENT, "verdict", "approval",
                         f"VETO. {'; '.join(report.violations)}. Keep the last valid plan.", data={"accepted": False})]
     flags = [
-        Message(COORDINATOR, EVERYONE, "flag", "approval", f"{jid} cannot be done this shift: {reason}. Flagged for the operator.", jid)
+        Message(FLEET_AGENT, EVERYONE, "flag", "approval", f"{jid} cannot be done this shift: {reason}. Flagged for the operator.", jid)
         for jid, reason in sorted(result.plan.unassignable.items())
     ]
-    verdict = Message(SAFETY_GATE, COORDINATOR, "verdict", "approval",
+    verdict = Message(SAFETY_AGENT, FLEET_AGENT, "verdict", "approval",
                       f"Checked the final plan against {len(report.checked)} safety rules: one tractor per job, finished work untouched, "
                       "implement / fuel / deadline, no job lost. All pass. Approved.", data={"accepted": True})
     acks = []
@@ -244,7 +294,7 @@ def approval(result: ReplanResult) -> list[Message]:
             continue
         first = f"Finishing {tractor.current_job}, then " if tractor.current_job else ""
         queue = " → ".join(tractor.queue) or "nothing queued"
-        acks.append(Message(tid, COORDINATOR, "ack", "approval", f"Confirmed. {first}{queue}.", data={"queue": list(tractor.queue)}))
+        acks.append(Message(tid, FLEET_AGENT, "ack", "approval", f"Confirmed. {first}{queue}.", data={"queue": list(tractor.queue)}))
     return [*flags, verdict, *acks]
 
 
@@ -253,4 +303,4 @@ def transcript(
 ) -> tuple[Message, ...]:
     """The whole conversation of one re-plan. `world` is the state the planner saw (after the event)."""
     inp = build_input(world, network)
-    return (*situation(world, trigger, released), *negotiation(inp, result.candidates), *approval(result))
+    return (*situation(world, network, trigger, released), *negotiation(inp, result.candidates), *approval(result))

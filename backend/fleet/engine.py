@@ -68,6 +68,10 @@ def _replan_entry(run: Run, trigger: dict, released: dict[str, str]) -> Run:
                     "released": sorted(released),
                     "blocked_roads": len(run.world.blocked_roads),
                 },
+                "navigate": {
+                    "locations": len(run.world.node_ids()),
+                    "roads_closed": sorted(sorted(road) for road in run.world.blocked_roads),
+                },
                 "plan": {
                     "duration_ms": round(result.duration_ms, 2),
                     "score": round(result.plan.score, 1),
@@ -183,13 +187,16 @@ def run_to_end(run: Run, dt: float = DEFAULT_DT) -> Run:
 def metrics(run: Run) -> dict:
     jobs = run.world.jobs.values()
     on_time = [j for j in jobs if j.status == JobStatus.DONE and j.completed_at is not None and j.completed_at <= j.deadline + 1e-6]
+    travel = sum(t.travel_time for t in run.world.tractors.values())
     return {
         "jobs_total": len(run.world.jobs),
         "jobs_completed": len(on_time),
         "priority1_completed": sum(1 for j in on_time if j.priority == 1),
         "priority_score": sum(PRIORITY_WEIGHT[j.priority] for j in on_time),
         "refuel_stops": sum(t.refuels for t in run.world.tractors.values()),
-        "travel_hours": round(sum(t.travel_time for t in run.world.tractors.values()), 2),
+        "travel_hours": round(travel, 2),
+        # Driving spent per job finished on time; 0 until the first job is done.
+        "travel_per_job": round(travel / len(on_time), 2) if on_time else 0.0,
         "idle_hours": round(sum(t.idle_time for t in run.world.tractors.values()), 2),
         "unassignable": sum(1 for j in jobs if j.status == JobStatus.UNASSIGNABLE),
         "invariant_violations": run.violations_total,

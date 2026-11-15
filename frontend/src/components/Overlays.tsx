@@ -98,6 +98,7 @@ const BENCH_ROWS: { key: string; label: string }[] = [
   { key: 'jobs_completed', label: 'Jobs on time' },
   { key: 'priority1_completed', label: 'Urgent (P1) jobs' },
   { key: 'travel_hours', label: 'Driving h' },
+  { key: 'travel_per_job', label: 'Driving h per job' },
   { key: 'idle_hours', label: 'Idle h' },
 ]
 

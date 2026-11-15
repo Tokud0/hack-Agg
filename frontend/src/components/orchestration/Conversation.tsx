@@ -13,8 +13,9 @@ const MAX_STAGGER_S = 1.2
 const STAGGER_STEP_S = 0.025
 
 const AGENT: Record<string, { name: string; short: string; color: string }> = {
-  coordinator: { name: 'Coordinator', short: 'C', color: '#7bd88f' },
-  safety_gate: { name: 'Safety gate', short: 'S', color: '#7dd3fc' },
+  fleet_agent: { name: 'Fleet Agent', short: 'F', color: '#7bd88f' },
+  navigation_agent: { name: 'Navigation Agent', short: 'N', color: '#f5a3c7' },
+  safety_agent: { name: 'Safety Agent', short: 'S', color: '#7dd3fc' },
   all: { name: 'everyone', short: '', color: '#9aa79e' },
 }
 
@@ -23,21 +24,21 @@ const agentColor = (id: string): string => AGENT[id]?.color ?? tractorColor(id)
 const isTractor = (id: string): boolean => !(id in AGENT)
 
 const PHASES: { id: MessagePhase; title: string; hint: string }[] = [
-  { id: 'situation', title: 'Situation', hint: 'What happened, and where every tractor is' },
-  { id: 'auction', title: 'Auction', hint: 'The coordinator calls each job; tractors bid or pass; the winner claims it' },
+  { id: 'situation', title: 'Situation', hint: 'What happened, the state of the roads, and where every tractor is' },
+  { id: 'auction', title: 'Auction', hint: 'The Fleet Agent calls each job; tractors bid or pass; the winner gets a route and claims it' },
   { id: 'negotiation', title: 'Negotiation', hint: 'Tractors trade jobs between themselves when it improves the plan' },
-  { id: 'approval', title: 'Approval', hint: 'The safety gate rules on the plan; tractors confirm their queues' },
+  { id: 'approval', title: 'Approval', hint: 'The Safety Agent rules on the plan; tractors confirm their queues' },
 ]
 
 const KIND_LABEL: Record<string, string> = {
-  alert: 'alert', status: 'status', announce: 'call', bid: 'bid', decline: 'pass', award: 'award', claim: 'claim',
+  alert: 'alert', status: 'status', announce: 'call', bid: 'bid', decline: 'pass', award: 'award', route: 'route', claim: 'claim',
   no_taker: 'no taker', trade: 'offer', agree: 'agreed', flag: 'flag', verdict: 'verdict', ack: 'confirmed',
 }
 
 const KIND_TONE: Record<string, string> = {
   alert: 'bg-alarm/15 text-alarm', decline: 'bg-white/8 text-white/50', no_taker: 'bg-alarm/15 text-alarm', flag: 'bg-alarm/15 text-alarm',
   award: 'bg-leaf/15 text-leaf', claim: 'bg-leaf/15 text-leaf', agree: 'bg-leaf/15 text-leaf', ack: 'bg-leaf/15 text-leaf',
-  trade: 'bg-wheat/15 text-wheat', verdict: 'bg-sky-400/15 text-sky-300',
+  trade: 'bg-wheat/15 text-wheat', verdict: 'bg-sky-400/15 text-sky-300', route: 'bg-pink-300/15 text-pink-300',
 }
 
 /** Messages one agent sent or received, plus the calls it answered so its bids keep their context. */

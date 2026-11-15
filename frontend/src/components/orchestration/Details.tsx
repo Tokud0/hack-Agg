@@ -24,12 +24,12 @@ export function CandidateTable({ candidates }: { candidates: PlanCandidate[] }) 
   return (
     <section className="panel p-3" aria-label="Planner candidates">
       <div className="flex flex-wrap items-baseline justify-between gap-x-3">
-        <h2 className={heading}>Planner: every plan it tried</h2>
+        <h2 className={heading}>Fleet Agent: every auction round it tried</h2>
         <span className="text-[11px] text-white/40">score = priority-weighted work done, minus driving and late finishes</span>
       </div>
       <table className="mt-2 w-full text-[12px]">
         <thead className="text-left text-[10px] uppercase tracking-wider text-white/40">
-          <tr><th className="py-1 font-semibold">Starting idea</th><th className="font-semibold">Jobs placed</th><th className="font-semibold">First draft</th><th className="font-semibold">After improvement</th><th className="w-[30%]" /></tr>
+          <tr><th className="py-1 font-semibold">Order jobs were called in</th><th className="font-semibold">Jobs placed</th><th className="font-semibold">First draft</th><th className="font-semibold">After improvement</th><th className="w-[30%]" /></tr>
         </thead>
         <tbody>
           {candidates.map((c) => (
@@ -83,7 +83,7 @@ export function Outcome({ replan, explanation }: OutcomeProps) {
   return (
     <section className="panel flex flex-col gap-3 p-3" aria-label="Result of this re-plan">
       <div>
-        <h2 className={`${heading} flex items-center gap-1.5`}><ShieldIcon size={13} className="text-sky-300" />Safety gate</h2>
+        <h2 className={`${heading} flex items-center gap-1.5`}><ShieldIcon size={13} className="text-sky-300" />Safety Agent</h2>
         <ul className="mt-1.5 space-y-1 text-[12.5px]">
           {checked.map((name) => {
             const hasFailed = violations.some((v) => v.startsWith(name))
@@ -97,7 +97,7 @@ export function Outcome({ replan, explanation }: OutcomeProps) {
         </ul>
       </div>
       <div>
-        <h2 className={heading}>Dispatcher: who got what</h2>
+        <h2 className={heading}>Fleet Agent: who got what</h2>
         {changes.length === 0
           ? <p className="mt-1.5 text-[12.5px] text-white/45">No job changed hands.</p>
           : <ul className="mt-1">{changes.map((c) => <ChangeRow key={c.job_id} change={c} />)}</ul>}
@@ -121,7 +121,7 @@ export function FaultTestCard({ result, onClose }: { result: FaultTestResult; on
         <AlertIcon size={18} className="mt-0.5 shrink-0 text-alarm" />
         <div className="min-w-0 flex-1">
           <div className="font-bold text-white">
-            Test: we handed the safety gate a broken plan. {result.accepted ? 'It was NOT caught.' : 'It was vetoed, and the live plan was not touched.'}
+            Test: we handed the Safety Agent a broken plan. {result.accepted ? 'It was NOT caught.' : 'It was vetoed, and the live plan was not touched.'}
           </div>
           <div className="mt-1 text-white/70">Injected fault: {result.fault}.</div>
           <ul className="mt-1.5 space-y-0.5 font-mono text-[11.5px] text-alarm">

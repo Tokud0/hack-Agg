@@ -32,7 +32,7 @@ def main() -> None:
 
     bench = run_benchmark(50)
     (RESULTS / "benchmark.json").write_text(json.dumps(bench, indent=2))
-    keys = ("jobs_completed", "priority1_completed", "priority_score", "travel_hours", "idle_hours", "refuel_stops", "invariant_violations")
+    keys = ("jobs_completed", "priority1_completed", "priority_score", "travel_hours", "travel_per_job", "idle_hours", "refuel_stops", "invariant_violations")
     s = bench["summary"]
     lines = ["| metric (mean of 50) | coordinator | EDF | FCFS |", "|---|---|---|---|"]
     lines += [f"| {k} | {s['coordinator'].get(k, '')} | {s['edf'].get(k, '')} | {s['baseline'].get(k, '')} |" for k in keys]

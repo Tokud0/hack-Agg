@@ -44,6 +44,8 @@ function buildStages(entry: LogEntry, trace: ReplanTrace, explanation?: Explanat
   const violations = entry.data.invariants?.violations.length ?? 0
   const checks = entry.data.invariants?.checked.length ?? 0
   const isAccepted = trace.verify.accepted
+  const closed = trace.navigate.roads_closed
+  const changed = trace.dispatch.jobs_changed
   return [
     {
       name: 'Intake', kind: 'human', role: 'Turns a report into a typed event',
@@ -51,27 +53,27 @@ function buildStages(entry: LogEntry, trace: ReplanTrace, explanation?: Explanat
       limit: 'Can only propose. A human confirms.',
     },
     {
-      name: 'Planner', kind: 'search', role: 'Builds candidate plans and improves each one',
-      result: `${trace.plan.candidates.length} plans tried, best: ${winner?.name ?? 'keep empty plan'}`,
-      meta: `${trace.sense.open_jobs.length} open jobs · ${trace.sense.tractors_available.length} tractors · ${ms(trace.plan.duration_ms)}`,
+      name: 'Navigation Agent', kind: 'code', role: 'Plans routes and travel times between fields',
+      result: closed.length ? `Detours around ${closed.map((r) => r.join('–')).join(', ')}` : 'All roads open, direct routes',
+      meta: `${trace.navigate.locations} locations on the map`, tone: 'ok',
+      limit: 'Owns the road map. Every bid uses its travel times.',
+    },
+    {
+      name: 'Fleet Agent', kind: 'search', role: 'Runs the auction between the tractor agents and assigns jobs',
+      result: `${trace.plan.candidates.length} auction rounds, best: ${winner?.name ?? 'nothing to assign'}`,
+      meta: `${trace.sense.open_jobs.length} open jobs · ${trace.sense.tractors_available.length} tractor agents · ${ms(trace.plan.duration_ms)}`,
       tone: 'ok', limit: 'Same input, same plan. No LLM inside.',
     },
     {
-      name: 'Safety gate', kind: 'rules', role: 'Checks the plan before anyone acts on it',
+      name: 'Safety Agent', kind: 'rules', role: 'Checks the plan before any tractor acts on it',
       result: isAccepted ? `Passed ${checks} of ${checks} checks` : `Vetoed: ${violations} violation${violations === 1 ? '' : 's'}`,
-      meta: ms(trace.verify.duration_ms), tone: isAccepted ? 'ok' : 'bad',
-      limit: 'Has a veto. A failed plan is thrown away.',
-    },
-    {
-      name: 'Dispatcher', kind: 'code', role: 'Sends the approved queues to the tractors',
-      result: isAccepted ? `${trace.dispatch.jobs_changed} job${trace.dispatch.jobs_changed === 1 ? '' : 's'} changed hands` : 'Kept the last valid plan',
-      meta: trace.dispatch.unassignable.length ? `${trace.dispatch.unassignable.length} flagged as not doable` : 'nothing dropped',
-      tone: isAccepted ? 'ok' : 'bad', limit: 'Only runs plans the gate approved.',
+      meta: isAccepted ? `${changed} job${changed === 1 ? '' : 's'} changed hands · ${trace.dispatch.unassignable.length} flagged` : 'kept the last valid plan',
+      tone: isAccepted ? 'ok' : 'bad', limit: 'Has a veto. A failed plan is thrown away.',
     },
     {
       name: 'Explainer', kind: 'llm', role: 'Tells the operator what changed and why',
       result: explanation ? explanation.headline : 'Writing the explanation…',
-      meta: explanation ? (explanation.source === 'template' ? 'rule-based text' : `${explanation.source} · ${explanation.latency_ms ?? 0} ms`) : 'runs after dispatch',
+      meta: explanation ? (explanation.source === 'template' ? 'rule-based text' : `${explanation.source} · ${explanation.latency_ms ?? 0} ms`) : 'runs after the plan is approved',
       tone: explanation ? 'ok' : 'pending', limit: 'Reads the result. Cannot change the plan.',
     },
   ]
@@ -83,7 +85,7 @@ interface PipelineProps {
   explanation?: Explanation
 }
 
-/** The five agents in the order an event passes through them, filled with one re-plan's results. */
+/** ATC's orchestrator layer in the order an event passes through it, filled with one re-plan's results. */
 export function Pipeline({ entry, trace, explanation }: PipelineProps) {
   const stages = buildStages(entry, trace, explanation)
   return (

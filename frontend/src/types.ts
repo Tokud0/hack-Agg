@@ -47,6 +47,7 @@ export interface Metrics {
   priority_score: number
   refuel_stops: number
   travel_hours: number
+  travel_per_job: number
   idle_hours: number
   unassignable: number
   invariant_violations: number
@@ -76,6 +77,7 @@ export interface PlanCandidate {
 /** What each stage of the re-plan pipeline saw and produced. */
 export interface ReplanTrace {
   sense: { open_jobs: string[]; tractors_available: string[]; released: string[]; blocked_roads: number }
+  navigate: { locations: number; roads_closed: string[][] }
   plan: { duration_ms: number; score: number; candidates: PlanCandidate[] }
   verify: { duration_ms: number; accepted: boolean }
   dispatch: { jobs_changed: number; unassignable: string[] }
@@ -83,7 +85,7 @@ export interface ReplanTrace {
 
 export type MessagePhase = 'situation' | 'auction' | 'negotiation' | 'approval'
 
-/** One message between agents during a re-plan. Sender and receiver are a tractor id, "coordinator", "safety_gate" or "all". */
+/** One message between agents during a re-plan. Sender and receiver are a tractor id, "fleet_agent", "navigation_agent", "safety_agent" or "all". */
 export interface AgentMessage {
   sender: string
   to: string

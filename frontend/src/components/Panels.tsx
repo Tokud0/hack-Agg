@@ -32,12 +32,12 @@ interface CountersProps {
   compareTo?: Metrics
 }
 
-type CounterKey = 'jobs_completed' | 'priority1_completed' | 'travel_hours' | 'idle_hours'
+type CounterKey = 'jobs_completed' | 'priority1_completed' | 'travel_per_job' | 'idle_hours'
 
 const COUNTERS: { key: CounterKey; label: string; suffix: string; decimals: number; higherIsBetter: boolean }[] = [
   { key: 'jobs_completed', label: 'Done on time', suffix: '', decimals: 0, higherIsBetter: true },
   { key: 'priority1_completed', label: 'Urgent (P1)', suffix: '', decimals: 0, higherIsBetter: true },
-  { key: 'travel_hours', label: 'Driving', suffix: 'h', decimals: 1, higherIsBetter: false },
+  { key: 'travel_per_job', label: 'Driving per job', suffix: 'h', decimals: 2, higherIsBetter: false },
   { key: 'idle_hours', label: 'Standing idle', suffix: 'h', decimals: 1, higherIsBetter: false },
 ]
 
@@ -57,7 +57,10 @@ export function Counters({ metrics, accent, compareTo }: CountersProps) {
     ...c,
     value: metrics[c.key],
     suffix: c.key === 'jobs_completed' ? `/${metrics.jobs_total}` : c.suffix,
-    delta: compareTo ? metrics[c.key] - compareTo[c.key] : 0,
+    // A per-job figure means nothing until both sides have finished a job.
+    delta: compareTo && !(c.key === 'travel_per_job' && (metrics.jobs_completed === 0 || compareTo.jobs_completed === 0))
+      ? metrics[c.key] - compareTo[c.key] : 0,
+    note: c.key === 'travel_per_job' ? `${metrics.travel_hours.toFixed(1)} h total` : '',
   }))
   return (
     <div className="grid grid-cols-4 gap-2">
@@ -68,6 +71,7 @@ export function Counters({ metrics, accent, compareTo }: CountersProps) {
             <AnimatedNumber value={it.value} decimals={it.decimals} />
             <span className="text-xs text-white/40">{it.suffix}</span>
             {compareTo && <Delta value={it.delta} decimals={it.decimals} higherIsBetter={it.higherIsBetter} />}
+            {it.note && <span className="ml-1.5 font-sans text-[10px] font-normal text-white/40">{it.note}</span>}
           </div>
         </div>
       ))}

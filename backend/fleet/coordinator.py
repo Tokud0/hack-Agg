@@ -14,13 +14,16 @@ from dataclasses import dataclass, replace
 from typing import Literal
 
 from .feasibility import QueueEval, StartContext, evaluate_queue, start_context
-from .models import Job, JobStatus, Plan, Tractor, TractorStatus, World
+from .models import Implement, Job, JobStatus, Plan, Tractor, TractorStatus, World
 from .routing import RoadNetwork
 
 PRIORITY_WEIGHT = {1: 4.0, 2: 2.0, 3: 1.0}
 ASSIGN_WEIGHT = 1000.0  # completing work dominates everything else
 TRAVEL_WEIGHT = 10.0
 COMPLETION_WEIGHT = 1.0  # finish earlier -> less idle risk, more slack
+# A tractor waiting while another tractor with the same implement still has work queued.
+# Without it the search saves driving by loading one sprayer and leaving the other parked.
+IDLE_WEIGHT = 6.0
 DEFAULT_ITERATIONS = 50
 SHUFFLED_STARTS = 4
 
@@ -69,6 +72,7 @@ def _queue_cost(inp: PlanningInput, ev: QueueEval) -> float:
 def score_plan(inp: PlanningInput, queues: dict[str, tuple[str, ...]]) -> float | None:
     """Total objective (higher is better); None if any queue is infeasible."""
     total = 0.0
+    free_at: dict[Implement, list[float]] = {}
     for tractor in inp.tractors:
         queue = queues.get(tractor.id, ())
         ev = _eval(inp, tractor, queue)
@@ -76,7 +80,8 @@ def score_plan(inp: PlanningInput, queues: dict[str, tuple[str, ...]]) -> float 
             return None
         total += sum(ASSIGN_WEIGHT * priority_weight(inp.world.jobs[j]) for j in queue)
         total -= _queue_cost(inp, ev)
-    return total
+        free_at.setdefault(tractor.implement, []).append(max(ev.end_time, inp.world.time))
+    return total - IDLE_WEIGHT * sum(max(times) - t for times in free_at.values() for t in times)
 
 
 def best_insertion(

@@ -7,6 +7,7 @@
       "priority_score": 14.0,
       "refuel_stops": 1,
       "travel_hours": 10.66,
+      "travel_per_job": 1.52,
       "idle_hours": 0.29,
       "unassignable": 3,
       "invariant_violations": 0,
@@ -142,6 +143,7 @@
       "priority_score": 16.0,
       "refuel_stops": 0,
       "travel_hours": 9.0,
+      "travel_per_job": 1.29,
       "idle_hours": 1.5,
       "unassignable": 3,
       "invariant_violations": 0,
@@ -256,14 +258,15 @@
       "jobs_total": 10,
       "jobs_completed": 8,
       "priority1_completed": 3,
-      "priority_score": 21.0,
+      "priority_score": 20.0,
       "refuel_stops": 1,
-      "travel_hours": 11.47,
-      "idle_hours": 0.08,
+      "travel_hours": 11.96,
+      "travel_per_job": 1.49,
+      "idle_hours": 0.04,
       "unassignable": 2,
       "invariant_violations": 0,
       "replans": 2,
-      "makespan_hours": 12.3
+      "makespan_hours": 12.25
     },
     "log": [
       {
@@ -275,9 +278,9 @@
       {
         "time": 0.0,
         "kind": "replan",
-        "message": "Re-planned in 12.3 ms after initial_plan",
+        "message": "Re-planned in 26.1 ms after initial_plan",
         "data": {
-          "duration_ms": 12.35,
+          "duration_ms": 26.09,
           "accepted": true,
           "invariants": {
             "checked": [
@@ -360,7 +363,7 @@
                 "job_type": "spray",
                 "priority": 3,
                 "before": "unplanned",
-                "after": "T1",
+                "after": "T3",
                 "reason": null,
                 "progress": 0.0
               },
@@ -403,7 +406,6 @@
             "queues_after": {
               "T1": [
                 "J02",
-                "J07",
                 "J04",
                 "J06",
                 "J05"
@@ -414,8 +416,9 @@
                 "J10"
               ],
               "T3": [
-                "J01",
-                "J03"
+                "J07",
+                "J03",
+                "J01"
               ]
             }
           },
@@ -473,7 +476,7 @@
               "to": "all",
               "kind": "note",
               "phase": "auction",
-              "text": "I ran this auction 8 times, announcing the jobs in a different order each time. Best outcome: \"priority order\". This is that round.",
+              "text": "I ran this auction 8 times, announcing the jobs in a different order each time. Best outcome: \"deadline order\". This is that round.",
               "topic": "",
               "data": {}
             },
@@ -621,79 +624,6 @@
               "to": "all",
               "kind": "announce",
               "phase": "auction",
-              "text": "Who takes J05? Spray on F6, P1, 1.5 h of work, due 17:00.",
-              "topic": "J05",
-              "data": {
-                "field_id": "F6",
-                "priority": 1,
-                "deadline": 11.0
-              }
-            },
-            {
-              "sender": "T1",
-              "to": "coordinator",
-              "kind": "bid",
-              "phase": "auction",
-              "text": "I can finish it by 11:13, with 2.0 h more driving.",
-              "topic": "J05",
-              "data": {
-                "value": 25.38,
-                "finish": 5.22,
-                "extra_travel": 2.02,
-                "is_winner": true
-              }
-            },
-            {
-              "sender": "T2",
-              "to": "coordinator",
-              "kind": "decline",
-              "phase": "auction",
-              "text": "I pass: I carry a mower, this needs a sprayer.",
-              "topic": "J05",
-              "data": {}
-            },
-            {
-              "sender": "T3",
-              "to": "coordinator",
-              "kind": "bid",
-              "phase": "auction",
-              "text": "I can finish it by 09:48, with 2.3 h more driving.",
-              "topic": "J05",
-              "data": {
-                "value": 26.85,
-                "finish": 3.8,
-                "extra_travel": 2.3,
-                "is_winner": false
-              }
-            },
-            {
-              "sender": "coordinator",
-              "to": "T1",
-              "kind": "award",
-              "phase": "auction",
-              "text": "J05 goes to T1: lowest added cost.",
-              "topic": "J05",
-              "data": {}
-            },
-            {
-              "sender": "T1",
-              "to": "all",
-              "kind": "claim",
-              "phase": "auction",
-              "text": "J05 is mine. Nobody else needs to plan for it.",
-              "topic": "J05",
-              "data": {
-                "queue": [
-                  "J02",
-                  "J05"
-                ]
-              }
-            },
-            {
-              "sender": "coordinator",
-              "to": "all",
-              "kind": "announce",
-              "phase": "auction",
               "text": "Who takes J08? Mow on F3, P2, 2.0 h of work, due 12:00.",
               "topic": "J08",
               "data": {
@@ -775,12 +705,12 @@
               "to": "coordinator",
               "kind": "bid",
               "phase": "auction",
-              "text": "I can finish it by 10:27, with 1.0 h more driving.",
+              "text": "I can finish it by 10:27, with 1.2 h more driving.",
               "topic": "J01",
               "data": {
-                "value": 16.98,
+                "value": 16.96,
                 "finish": 4.46,
-                "extra_travel": 1.0,
+                "extra_travel": 1.25,
                 "is_winner": false
               }
             },
@@ -834,155 +764,6 @@
               "to": "all",
               "kind": "announce",
               "phase": "auction",
-              "text": "Who takes J03? Spray on F4, P2, 1.5 h of work, due 16:00.",
-              "topic": "J03",
-              "data": {
-                "field_id": "F4",
-                "priority": 2,
-                "deadline": 10.0
-              }
-            },
-            {
-              "sender": "T1",
-              "to": "coordinator",
-              "kind": "bid",
-              "phase": "auction",
-              "text": "I can finish it by 10:07, with 0.0 h more driving.",
-              "topic": "J03",
-              "data": {
-                "value": 5.65,
-                "finish": 4.11,
-                "extra_travel": 0.0,
-                "is_winner": true
-              }
-            },
-            {
-              "sender": "T2",
-              "to": "coordinator",
-              "kind": "decline",
-              "phase": "auction",
-              "text": "I pass: I carry a mower, this needs a sprayer.",
-              "topic": "J03",
-              "data": {}
-            },
-            {
-              "sender": "T3",
-              "to": "coordinator",
-              "kind": "bid",
-              "phase": "auction",
-              "text": "I can finish it by 10:58, with 1.1 h more driving.",
-              "topic": "J03",
-              "data": {
-                "value": 15.57,
-                "finish": 4.96,
-                "extra_travel": 1.06,
-                "is_winner": false
-              }
-            },
-            {
-              "sender": "coordinator",
-              "to": "T1",
-              "kind": "award",
-              "phase": "auction",
-              "text": "J03 goes to T1: lowest added cost.",
-              "topic": "J03",
-              "data": {}
-            },
-            {
-              "sender": "T1",
-              "to": "all",
-              "kind": "claim",
-              "phase": "auction",
-              "text": "J03 is mine. Nobody else needs to plan for it.",
-              "topic": "J03",
-              "data": {
-                "queue": [
-                  "J02",
-                  "J03",
-                  "J05"
-                ]
-              }
-            },
-            {
-              "sender": "coordinator",
-              "to": "all",
-              "kind": "announce",
-              "phase": "auction",
-              "text": "Who takes J06? Spray on F7, P2, 1.0 h of work, due 19:00.",
-              "topic": "J06",
-              "data": {
-                "field_id": "F7",
-                "priority": 2,
-                "deadline": 13.0
-              }
-            },
-            {
-              "sender": "T1",
-              "to": "coordinator",
-              "kind": "bid",
-              "phase": "auction",
-              "text": "I can finish it by 12:14, with 1.0 h more driving.",
-              "topic": "J06",
-              "data": {
-                "value": 18.23,
-                "finish": 6.23,
-                "extra_travel": 1.0,
-                "is_winner": true
-              }
-            },
-            {
-              "sender": "T2",
-              "to": "coordinator",
-              "kind": "decline",
-              "phase": "auction",
-              "text": "I pass: I carry a mower, this needs a sprayer.",
-              "topic": "J06",
-              "data": {}
-            },
-            {
-              "sender": "T3",
-              "to": "coordinator",
-              "kind": "bid",
-              "phase": "auction",
-              "text": "I can finish it by 11:33, with 2.2 h more driving.",
-              "topic": "J06",
-              "data": {
-                "value": 27.06,
-                "finish": 5.55,
-                "extra_travel": 2.15,
-                "is_winner": false
-              }
-            },
-            {
-              "sender": "coordinator",
-              "to": "T1",
-              "kind": "award",
-              "phase": "auction",
-              "text": "J06 goes to T1: lowest added cost.",
-              "topic": "J06",
-              "data": {}
-            },
-            {
-              "sender": "T1",
-              "to": "all",
-              "kind": "claim",
-              "phase": "auction",
-              "text": "J06 is mine. Nobody else needs to plan for it.",
-              "topic": "J06",
-              "data": {
-                "queue": [
-                  "J02",
-                  "J03",
-                  "J06",
-                  "J05"
-                ]
-              }
-            },
-            {
-              "sender": "coordinator",
-              "to": "all",
-              "kind": "announce",
-              "phase": "auction",
               "text": "Who takes J07? Spray on F8, P3, 1.0 h of work, due 15:00.",
               "topic": "J07",
               "data": {
@@ -996,12 +777,12 @@
               "to": "coordinator",
               "kind": "bid",
               "phase": "auction",
-              "text": "I can finish it by 09:16, with 1.1 h more driving.",
+              "text": "I can finish it by 09:16, with 0.6 h more driving.",
               "topic": "J07",
               "data": {
-                "value": 20.2,
+                "value": 8.86,
                 "finish": 3.27,
-                "extra_travel": 1.07,
+                "extra_travel": 0.56,
                 "is_winner": true
               }
             },
@@ -1047,10 +828,80 @@
               "data": {
                 "queue": [
                   "J02",
-                  "J07",
-                  "J03",
-                  "J06",
-                  "J05"
+                  "J07"
+                ]
+              }
+            },
+            {
+              "sender": "coordinator",
+              "to": "all",
+              "kind": "announce",
+              "phase": "auction",
+              "text": "Who takes J03? Spray on F4, P2, 1.5 h of work, due 16:00.",
+              "topic": "J03",
+              "data": {
+                "field_id": "F4",
+                "priority": 2,
+                "deadline": 10.0
+              }
+            },
+            {
+              "sender": "T1",
+              "to": "coordinator",
+              "kind": "bid",
+              "phase": "auction",
+              "text": "I can finish it by 12:11, with 1.4 h more driving.",
+              "topic": "J03",
+              "data": {
+                "value": 20.32,
+                "finish": 6.18,
+                "extra_travel": 1.41,
+                "is_winner": false
+              }
+            },
+            {
+              "sender": "T2",
+              "to": "coordinator",
+              "kind": "decline",
+              "phase": "auction",
+              "text": "I pass: I carry a mower, this needs a sprayer.",
+              "topic": "J03",
+              "data": {}
+            },
+            {
+              "sender": "T3",
+              "to": "coordinator",
+              "kind": "bid",
+              "phase": "auction",
+              "text": "I can finish it by 10:58, with 1.1 h more driving.",
+              "topic": "J03",
+              "data": {
+                "value": 15.57,
+                "finish": 4.96,
+                "extra_travel": 1.06,
+                "is_winner": true
+              }
+            },
+            {
+              "sender": "coordinator",
+              "to": "T3",
+              "kind": "award",
+              "phase": "auction",
+              "text": "J03 goes to T3: lowest added cost.",
+              "topic": "J03",
+              "data": {}
+            },
+            {
+              "sender": "T3",
+              "to": "all",
+              "kind": "claim",
+              "phase": "auction",
+              "text": "J03 is mine. Nobody else needs to plan for it.",
+              "topic": "J03",
+              "data": {
+                "queue": [
+                  "J01",
+                  "J03"
                 ]
               }
             },
@@ -1128,6 +979,80 @@
               "to": "all",
               "kind": "announce",
               "phase": "auction",
+              "text": "Who takes J05? Spray on F6, P1, 1.5 h of work, due 17:00.",
+              "topic": "J05",
+              "data": {
+                "field_id": "F6",
+                "priority": 1,
+                "deadline": 11.0
+              }
+            },
+            {
+              "sender": "T1",
+              "to": "coordinator",
+              "kind": "bid",
+              "phase": "auction",
+              "text": "I can finish it by 13:16, with 2.5 h more driving.",
+              "topic": "J05",
+              "data": {
+                "value": 32.27,
+                "finish": 7.27,
+                "extra_travel": 2.5,
+                "is_winner": true
+              }
+            },
+            {
+              "sender": "T2",
+              "to": "coordinator",
+              "kind": "decline",
+              "phase": "auction",
+              "text": "I pass: I carry a mower, this needs a sprayer.",
+              "topic": "J05",
+              "data": {}
+            },
+            {
+              "sender": "T3",
+              "to": "coordinator",
+              "kind": "bid",
+              "phase": "auction",
+              "text": "I can finish it by 16:16, with 3.6 h more driving.",
+              "topic": "J05",
+              "data": {
+                "value": 45.82,
+                "finish": 10.27,
+                "extra_travel": 3.55,
+                "is_winner": false
+              }
+            },
+            {
+              "sender": "coordinator",
+              "to": "T1",
+              "kind": "award",
+              "phase": "auction",
+              "text": "J05 goes to T1: lowest added cost.",
+              "topic": "J05",
+              "data": {}
+            },
+            {
+              "sender": "T1",
+              "to": "all",
+              "kind": "claim",
+              "phase": "auction",
+              "text": "J05 is mine. Nobody else needs to plan for it.",
+              "topic": "J05",
+              "data": {
+                "queue": [
+                  "J02",
+                  "J07",
+                  "J05"
+                ]
+              }
+            },
+            {
+              "sender": "coordinator",
+              "to": "all",
+              "kind": "announce",
+              "phase": "auction",
               "text": "Who takes J04? Spray on F5, P3, 2.0 h of work, due 18:00.",
               "topic": "J04",
               "data": {
@@ -1139,11 +1064,16 @@
             {
               "sender": "T1",
               "to": "coordinator",
-              "kind": "decline",
+              "kind": "bid",
               "phase": "auction",
-              "text": "I pass: T1 would finish J04 at 17.2h (incl. refuel stop), deadline 12.0h.",
+              "text": "I can finish it by 12:31, with 0.4 h more driving.",
               "topic": "J04",
-              "data": {}
+              "data": {
+                "value": 13.21,
+                "finish": 6.52,
+                "extra_travel": 0.43,
+                "is_winner": true
+              }
             },
             {
               "sender": "T2",
@@ -1159,26 +1089,26 @@
               "to": "coordinator",
               "kind": "bid",
               "phase": "auction",
-              "text": "I can finish it by 12:25, with 2.0 h more driving.",
+              "text": "I can finish it by 16:16, with 3.1 h more driving.",
               "topic": "J04",
               "data": {
-                "value": 26.57,
-                "finish": 6.42,
-                "extra_travel": 2.02,
-                "is_winner": true
+                "value": 40.79,
+                "finish": 10.26,
+                "extra_travel": 3.05,
+                "is_winner": false
               }
             },
             {
               "sender": "coordinator",
-              "to": "T3",
+              "to": "T1",
               "kind": "award",
               "phase": "auction",
-              "text": "J04 goes to T3: lowest added cost.",
+              "text": "J04 goes to T1: lowest added cost.",
               "topic": "J04",
               "data": {}
             },
             {
-              "sender": "T3",
+              "sender": "T1",
               "to": "all",
               "kind": "claim",
               "phase": "auction",
@@ -1186,31 +1116,108 @@
               "topic": "J04",
               "data": {
                 "queue": [
-                  "J01",
-                  "J04"
+                  "J02",
+                  "J07",
+                  "J04",
+                  "J05"
                 ]
               }
             },
             {
+              "sender": "coordinator",
+              "to": "all",
+              "kind": "announce",
+              "phase": "auction",
+              "text": "Who takes J06? Spray on F7, P2, 1.0 h of work, due 19:00.",
+              "topic": "J06",
+              "data": {
+                "field_id": "F7",
+                "priority": 2,
+                "deadline": 13.0
+              }
+            },
+            {
               "sender": "T1",
-              "to": "T3",
-              "kind": "trade",
-              "phase": "negotiation",
-              "text": "Swap? You take J03, I take J04. The plan gets better by 14 points.",
-              "topic": "J03, J04",
+              "to": "coordinator",
+              "kind": "bid",
+              "phase": "auction",
+              "text": "I can finish it by 14:25, with 0.2 h more driving.",
+              "topic": "J06",
+              "data": {
+                "value": 11.89,
+                "finish": 8.42,
+                "extra_travel": 0.22,
+                "is_winner": true
+              }
+            },
+            {
+              "sender": "T2",
+              "to": "coordinator",
+              "kind": "decline",
+              "phase": "auction",
+              "text": "I pass: I carry a mower, this needs a sprayer.",
+              "topic": "J06",
               "data": {}
             },
             {
               "sender": "T3",
+              "to": "coordinator",
+              "kind": "bid",
+              "phase": "auction",
+              "text": "I can finish it by 13:05, with 1.1 h more driving.",
+              "topic": "J06",
+              "data": {
+                "value": 18.26,
+                "finish": 7.08,
+                "extra_travel": 1.12,
+                "is_winner": false
+              }
+            },
+            {
+              "sender": "coordinator",
               "to": "T1",
+              "kind": "award",
+              "phase": "auction",
+              "text": "J06 goes to T1: lowest added cost.",
+              "topic": "J06",
+              "data": {}
+            },
+            {
+              "sender": "T1",
+              "to": "all",
+              "kind": "claim",
+              "phase": "auction",
+              "text": "J06 is mine. Nobody else needs to plan for it.",
+              "topic": "J06",
+              "data": {
+                "queue": [
+                  "J02",
+                  "J07",
+                  "J04",
+                  "J06",
+                  "J05"
+                ]
+              }
+            },
+            {
+              "sender": "T3",
+              "to": "T1",
+              "kind": "trade",
+              "phase": "negotiation",
+              "text": "Hand me J02, it fits my route better. The plan gets better by 12 points.",
+              "topic": "J02",
+              "data": {}
+            },
+            {
+              "sender": "T1",
+              "to": "T3",
               "kind": "agree",
               "phase": "negotiation",
-              "text": "Agreed: J03 is mine, J04 is yours.",
-              "topic": "J03, J04",
+              "text": "Agreed, J02 is yours.",
+              "topic": "J02",
               "data": {
                 "queues": {
                   "T1": [
-                    "J02",
                     "J07",
                     "J04",
                     "J06",
@@ -1222,11 +1229,79 @@
                     "J10"
                   ],
                   "T3": [
+                    "J02",
                     "J01",
                     "J03"
                   ]
                 },
-                "gain": 14.2
+                "gain": 12.4
+              }
+            },
+            {
+              "sender": "T3",
+              "to": "all",
+              "kind": "trade",
+              "phase": "negotiation",
+              "text": "I am reordering my own queue to J02 \u2192 J03 \u2192 J01. The plan gets better by 2 points.",
+              "topic": "",
+              "data": {
+                "queues": {
+                  "T1": [
+                    "J07",
+                    "J04",
+                    "J06",
+                    "J05"
+                  ],
+                  "T2": [
+                    "J09",
+                    "J08",
+                    "J10"
+                  ],
+                  "T3": [
+                    "J02",
+                    "J03",
+                    "J01"
+                  ]
+                },
+                "gain": 2.1
+              }
+            },
+            {
+              "sender": "T3",
+              "to": "T1",
+              "kind": "trade",
+              "phase": "negotiation",
+              "text": "Swap? You take J02, I take J07. The plan gets better by 4 points.",
+              "topic": "J02, J07",
+              "data": {}
+            },
+            {
+              "sender": "T1",
+              "to": "T3",
+              "kind": "agree",
+              "phase": "negotiation",
+              "text": "Agreed: J02 is mine, J07 is yours.",
+              "topic": "J02, J07",
+              "data": {
+                "queues": {
+                  "T1": [
+                    "J02",
+                    "J04",
+                    "J06",
+                    "J05"
+                  ],
+                  "T2": [
+                    "J09",
+                    "J08",
+                    "J10"
+                  ],
+                  "T3": [
+                    "J07",
+                    "J03",
+                    "J01"
+                  ]
+                },
+                "gain": 3.6
               }
             },
             {
@@ -1245,12 +1320,11 @@
               "to": "coordinator",
               "kind": "ack",
               "phase": "approval",
-              "text": "Confirmed. J02 \u2192 J07 \u2192 J04 \u2192 J06 \u2192 J05.",
+              "text": "Confirmed. J02 \u2192 J04 \u2192 J06 \u2192 J05.",
               "topic": "",
               "data": {
                 "queue": [
                   "J02",
-                  "J07",
                   "J04",
                   "J06",
                   "J05"
@@ -1277,12 +1351,13 @@
               "to": "coordinator",
               "kind": "ack",
               "phase": "approval",
-              "text": "Confirmed. J01 \u2192 J03.",
+              "text": "Confirmed. J07 \u2192 J03 \u2192 J01.",
               "topic": "",
               "data": {
                 "queue": [
-                  "J01",
-                  "J03"
+                  "J07",
+                  "J03",
+                  "J01"
                 ]
               }
             }
@@ -1310,69 +1385,69 @@
               "blocked_roads": 0
             },
             "plan": {
-              "duration_ms": 12.35,
-              "score": 22840.4,
+              "duration_ms": 26.09,
+              "score": 22822.8,
               "candidates": [
                 {
                   "name": "priority order",
-                  "start_score": 22826.21123585966,
-                  "score": 22840.449713127364,
-                  "jobs_assigned": 10,
-                  "is_winner": true
-                },
-                {
-                  "name": "deadline order",
-                  "start_score": 22840.449713127364,
-                  "score": 22840.449713127364,
+                  "start_score": 22799.922721435196,
+                  "score": 22822.57436143558,
                   "jobs_assigned": 10,
                   "is_winner": false
                 },
                 {
+                  "name": "deadline order",
+                  "start_score": 22804.716931504674,
+                  "score": 22822.81934308124,
+                  "jobs_assigned": 10,
+                  "is_winner": true
+                },
+                {
                   "name": "least slack first",
-                  "start_score": 22840.449713127364,
-                  "score": 22840.449713127364,
+                  "start_score": 22804.716931504674,
+                  "score": 22822.81934308124,
                   "jobs_assigned": 10,
                   "is_winner": false
                 },
                 {
                   "name": "earliest-deadline schedule",
-                  "start_score": 22805.489910723616,
-                  "score": 22840.449713127364,
+                  "start_score": 22799.497711606717,
+                  "score": 22822.81934308124,
                   "jobs_assigned": 10,
                   "is_winner": false
                 },
                 {
                   "name": "shuffled order #1",
-                  "start_score": 22840.449713127364,
-                  "score": 22840.449713127364,
+                  "start_score": 22804.716931504674,
+                  "score": 22822.81934308124,
                   "jobs_assigned": 10,
                   "is_winner": false
                 },
                 {
                   "name": "shuffled order #2",
-                  "start_score": 22837.259294921325,
-                  "score": 22837.259294921325,
+                  "start_score": 22819.181238200697,
+                  "score": 22822.81934308124,
                   "jobs_assigned": 10,
                   "is_winner": false
                 },
                 {
                   "name": "shuffled order #3",
-                  "start_score": 22830.068833165475,
-                  "score": 22830.068833165475,
+                  "start_score": 22797.40875241724,
+                  "score": 22822.81934308124,
                   "jobs_assigned": 10,
                   "is_winner": false
                 },
                 {
                   "name": "shuffled order #4",
-                  "start_score": 22830.068833165475,
-                  "score": 22830.068833165475,
+                  "start_score": 22797.40875241724,
+                  "score": 22822.81934308124,
                   "jobs_assigned": 10,
                   "is_winner": false
                 }
               ]
             },
             "verify": {
-              "duration_ms": 0.06,
+              "duration_ms": 0.07,
               "accepted": true
             },
             "dispatch": {
@@ -1383,7 +1458,7 @@
         },
         "explanation": {
           "headline": "Initial plan ready",
-          "summary": "Initial plan. T1: J02, J04, J05, J06, J07; T2: J08, J09, J10; T3: J01, J03.",
+          "summary": "Initial plan. T1: J02, J04, J05, J06; T2: J08, J09, J10; T3: J01, J03, J07.",
           "highlight_jobs": []
         }
       },
@@ -1394,9 +1469,9 @@
         "data": {}
       },
       {
-        "time": 0.9,
+        "time": 1.03,
         "kind": "job_started",
-        "message": "T3 started J01",
+        "message": "T3 started J07",
         "data": {}
       },
       {
@@ -1414,7 +1489,7 @@
       {
         "time": 2.0,
         "kind": "event",
-        "message": "T1 broke down, released J07, J04, J06, J05",
+        "message": "T1 broke down, released J04, J06, J05",
         "data": {
           "at": 2.0,
           "type": "breakdown",
@@ -1424,9 +1499,9 @@
       {
         "time": 2.0,
         "kind": "replan",
-        "message": "Re-planned in 5.3 ms after breakdown",
+        "message": "Re-planned in 5.8 ms after breakdown",
         "data": {
-          "duration_ms": 5.35,
+          "duration_ms": 5.8,
           "accepted": true,
           "invariants": {
             "checked": [
@@ -1445,6 +1520,16 @@
             },
             "time": 2.0,
             "changes": [
+              {
+                "job_id": "J01",
+                "field_id": "F1",
+                "job_type": "spray",
+                "priority": 2,
+                "before": "T3",
+                "after": "unassignable",
+                "reason": "T3 is fully booked with higher-value work (T3 would finish J01 at 17.2h (incl. refuel stop), deadline 8.0h)",
+                "progress": 0.0
+              },
               {
                 "job_id": "J04",
                 "field_id": "F5",
@@ -1474,16 +1559,6 @@
                 "after": "T3",
                 "reason": null,
                 "progress": 0.0
-              },
-              {
-                "job_id": "J07",
-                "field_id": "F8",
-                "job_type": "spray",
-                "priority": 3,
-                "before": "T1",
-                "after": "unassignable",
-                "reason": "T3 is fully booked with higher-value work (T3 would finish J07 at 15.3h, deadline 9.0h)",
-                "progress": 0.0
               }
             ],
             "queues_before": {
@@ -1493,7 +1568,8 @@
                 "J10"
               ],
               "T3": [
-                "J03"
+                "J03",
+                "J01"
               ]
             },
             "queues_after": {
@@ -1515,14 +1591,13 @@
               "to": "all",
               "kind": "alert",
               "phase": "situation",
-              "text": "I have broken down near F2. I release J04, J05, J06, J07.",
+              "text": "I have broken down near F2. I release J04, J05, J06.",
               "topic": "",
               "data": {
                 "released": [
                   "J04",
                   "J05",
-                  "J06",
-                  "J07"
+                  "J06"
                 ]
               }
             },
@@ -1553,12 +1628,12 @@
               "to": "all",
               "kind": "status",
               "phase": "situation",
-              "text": "Sprayer, at F1, fuel 47/60. Working on J01 (73% done). I keep it.",
+              "text": "Sprayer, at F8, fuel 47/60. Working on J07 (97% done). I keep it.",
               "topic": "",
               "data": {
-                "node": "F1",
+                "node": "F8",
                 "fuel": 47,
-                "current_job": "J01"
+                "current_job": "J07"
               }
             },
             {
@@ -1597,12 +1672,12 @@
               "to": "coordinator",
               "kind": "bid",
               "phase": "auction",
-              "text": "I can finish it by 11:40, with 1.8 h more driving.",
+              "text": "I can finish it by 12:02, with 2.5 h more driving.",
               "topic": "J05",
               "data": {
-                "value": 21.35,
-                "finish": 5.67,
-                "extra_travel": 1.77,
+                "value": 29.03,
+                "finish": 6.03,
+                "extra_travel": 2.5,
                 "is_winner": true
               }
             },
@@ -1691,6 +1766,65 @@
               "to": "all",
               "kind": "announce",
               "phase": "auction",
+              "text": "Who takes J01? Spray on F1, P2, 1.5 h of work, due 14:00.",
+              "topic": "J01",
+              "data": {
+                "field_id": "F1",
+                "priority": 2,
+                "deadline": 8.0
+              }
+            },
+            {
+              "sender": "T2",
+              "to": "coordinator",
+              "kind": "decline",
+              "phase": "auction",
+              "text": "I pass: I carry a mower, this needs a sprayer.",
+              "topic": "J01",
+              "data": {}
+            },
+            {
+              "sender": "T3",
+              "to": "coordinator",
+              "kind": "bid",
+              "phase": "auction",
+              "text": "I can finish it by 11:18, with 2.5 h more driving.",
+              "topic": "J01",
+              "data": {
+                "value": 32.26,
+                "finish": 5.3,
+                "extra_travel": 2.47,
+                "is_winner": true
+              }
+            },
+            {
+              "sender": "coordinator",
+              "to": "T3",
+              "kind": "award",
+              "phase": "auction",
+              "text": "J01 goes to T3: lowest added cost.",
+              "topic": "J01",
+              "data": {}
+            },
+            {
+              "sender": "T3",
+              "to": "all",
+              "kind": "claim",
+              "phase": "auction",
+              "text": "J01 is mine. Nobody else needs to plan for it.",
+              "topic": "J01",
+              "data": {
+                "queue": [
+                  "J01",
+                  "J05"
+                ]
+              }
+            },
+            {
+              "sender": "coordinator",
+              "to": "all",
+              "kind": "announce",
+              "phase": "auction",
               "text": "Who takes J03? Spray on F4, P2, 1.5 h of work, due 16:00.",
               "topic": "J03",
               "data": {
@@ -1711,39 +1845,20 @@
             {
               "sender": "T3",
               "to": "coordinator",
-              "kind": "bid",
+              "kind": "decline",
               "phase": "auction",
-              "text": "I can finish it by 10:58, with 2.8 h more driving.",
-              "topic": "J03",
-              "data": {
-                "value": 36.04,
-                "finish": 4.96,
-                "extra_travel": 2.85,
-                "is_winner": true
-              }
-            },
-            {
-              "sender": "coordinator",
-              "to": "T3",
-              "kind": "award",
-              "phase": "auction",
-              "text": "J03 goes to T3: lowest added cost.",
+              "text": "I pass: T3 would finish J03 at 12.9h, deadline 10.0h.",
               "topic": "J03",
               "data": {}
             },
             {
-              "sender": "T3",
+              "sender": "coordinator",
               "to": "all",
-              "kind": "claim",
+              "kind": "no_taker",
               "phase": "auction",
-              "text": "J03 is mine. Nobody else needs to plan for it.",
+              "text": "No one can take J03 right now. It stays in the pool.",
               "topic": "J03",
-              "data": {
-                "queue": [
-                  "J03",
-                  "J05"
-                ]
-              }
+              "data": {}
             },
             {
               "sender": "coordinator",
@@ -1772,11 +1887,11 @@
               "to": "coordinator",
               "kind": "bid",
               "phase": "auction",
-              "text": "I can finish it by 18:16, with 1.0 h more driving.",
+              "text": "I can finish it by 18:15, with 1.0 h more driving.",
               "topic": "J06",
               "data": {
-                "value": 20.27,
-                "finish": 12.27,
+                "value": 20.25,
+                "finish": 12.25,
                 "extra_travel": 1.0,
                 "is_winner": true
               }
@@ -1799,51 +1914,11 @@
               "topic": "J06",
               "data": {
                 "queue": [
-                  "J03",
+                  "J01",
                   "J05",
                   "J06"
                 ]
               }
-            },
-            {
-              "sender": "coordinator",
-              "to": "all",
-              "kind": "announce",
-              "phase": "auction",
-              "text": "Who takes J07? Spray on F8, P3, 1.0 h of work, due 15:00.",
-              "topic": "J07",
-              "data": {
-                "field_id": "F8",
-                "priority": 3,
-                "deadline": 9.0
-              }
-            },
-            {
-              "sender": "T2",
-              "to": "coordinator",
-              "kind": "decline",
-              "phase": "auction",
-              "text": "I pass: I carry a mower, this needs a sprayer.",
-              "topic": "J07",
-              "data": {}
-            },
-            {
-              "sender": "T3",
-              "to": "coordinator",
-              "kind": "decline",
-              "phase": "auction",
-              "text": "I pass: T3 would finish J07 at 15.3h, deadline 9.0h.",
-              "topic": "J07",
-              "data": {}
-            },
-            {
-              "sender": "coordinator",
-              "to": "all",
-              "kind": "no_taker",
-              "phase": "auction",
-              "text": "No one can take J07 right now. It stays in the pool.",
-              "topic": "J07",
-              "data": {}
             },
             {
               "sender": "coordinator",
@@ -1945,12 +2020,34 @@
               "data": {}
             },
             {
+              "sender": "T3",
+              "to": "coordinator",
+              "kind": "trade",
+              "phase": "negotiation",
+              "text": "I give J01 back to the pool and take J03 instead: worth more. The plan gets better by 0 points.",
+              "topic": "J01, J03",
+              "data": {
+                "queues": {
+                  "T2": [
+                    "J08",
+                    "J10"
+                  ],
+                  "T3": [
+                    "J03",
+                    "J05",
+                    "J06"
+                  ]
+                },
+                "gain": 0.4
+              }
+            },
+            {
               "sender": "coordinator",
               "to": "all",
               "kind": "flag",
               "phase": "approval",
-              "text": "J04 cannot be done this shift: T3 is fully booked with higher-value work (T3 would finish J04 at 18.6h (incl. refuel stop), deadline 12.0h). Flagged for the operator.",
-              "topic": "J04",
+              "text": "J01 cannot be done this shift: T3 is fully booked with higher-value work (T3 would finish J01 at 17.2h (incl. refuel stop), deadline 8.0h). Flagged for the operator.",
+              "topic": "J01",
               "data": {}
             },
             {
@@ -1958,8 +2055,8 @@
               "to": "all",
               "kind": "flag",
               "phase": "approval",
-              "text": "J07 cannot be done this shift: T3 is fully booked with higher-value work (T3 would finish J07 at 15.3h, deadline 9.0h). Flagged for the operator.",
-              "topic": "J07",
+              "text": "J04 cannot be done this shift: T3 is fully booked with higher-value work (T3 would finish J04 at 18.6h (incl. refuel stop), deadline 12.0h). Flagged for the operator.",
+              "topic": "J04",
               "data": {}
             },
             {
@@ -1992,7 +2089,7 @@
               "to": "coordinator",
               "kind": "ack",
               "phase": "approval",
-              "text": "Confirmed. Finishing J01, then J03 \u2192 J05 \u2192 J06.",
+              "text": "Confirmed. Finishing J07, then J03 \u2192 J05 \u2192 J06.",
               "topic": "",
               "data": {
                 "queue": [
@@ -2023,68 +2120,67 @@
               "released": [
                 "J04",
                 "J05",
-                "J06",
-                "J07"
+                "J06"
               ],
               "blocked_roads": 0
             },
             "plan": {
-              "duration_ms": 5.35,
-              "score": 10884.0,
+              "duration_ms": 5.8,
+              "score": 10880.5,
               "candidates": [
                 {
                   "name": "priority order",
-                  "start_score": 10884.03174324716,
-                  "score": 10884.03174324716,
+                  "start_score": 10880.134535502728,
+                  "score": 10880.547383406833,
                   "jobs_assigned": 5,
                   "is_winner": true
                 },
                 {
                   "name": "deadline order",
-                  "start_score": 7885.277526142557,
-                  "score": 10884.03174324716,
+                  "start_score": 8886.45908145227,
+                  "score": 10880.547383406833,
                   "jobs_assigned": 5,
                   "is_winner": false
                 },
                 {
                   "name": "least slack first",
-                  "start_score": 7885.277526142557,
-                  "score": 10884.03174324716,
+                  "start_score": 8886.45908145227,
+                  "score": 10880.547383406833,
                   "jobs_assigned": 5,
                   "is_winner": false
                 },
                 {
                   "name": "earliest-deadline schedule",
-                  "start_score": 7874.1736784575805,
-                  "score": 10884.03174324716,
+                  "start_score": 8878.028153382085,
+                  "score": 10880.547383406833,
                   "jobs_assigned": 5,
                   "is_winner": false
                 },
                 {
                   "name": "shuffled order #1",
-                  "start_score": 7885.277526142557,
-                  "score": 10884.03174324716,
+                  "start_score": 10880.134535502728,
+                  "score": 10880.547383406833,
                   "jobs_assigned": 5,
                   "is_winner": false
                 },
                 {
                   "name": "shuffled order #2",
-                  "start_score": 7890.1418029587285,
-                  "score": 10884.03174324716,
+                  "start_score": 7883.617728955152,
+                  "score": 10880.547383406833,
                   "jobs_assigned": 5,
                   "is_winner": false
                 },
                 {
                   "name": "shuffled order #3",
-                  "start_score": 7885.277526142557,
-                  "score": 10884.03174324716,
+                  "start_score": 8886.45908145227,
+                  "score": 10880.547383406833,
                   "jobs_assigned": 5,
                   "is_winner": false
                 },
                 {
                   "name": "shuffled order #4",
-                  "start_score": 10884.03174324716,
-                  "score": 10884.03174324716,
+                  "start_score": 10880.134535502728,
+                  "score": 10880.547383406833,
                   "jobs_assigned": 5,
                   "is_winner": false
                 }
@@ -2097,27 +2193,27 @@
             "dispatch": {
               "jobs_changed": 4,
               "unassignable": [
-                "J04",
-                "J07"
+                "J01",
+                "J04"
               ]
             }
           }
         },
         "explanation": {
           "headline": "Re-plan after breakdown",
-          "summary": "T1 broke down; its unfinished work was released. Reassigned: J05 T1\u2192T3, J06 T1\u2192T3. J04 cannot be done: T3 is fully booked with higher-value work (T3 would finish J04 at 18.6h (incl. refuel stop), deadline 12.0h). J07 cannot be done: T3 is fully booked with higher-value work (T3 would finish J07 at 15.3h, deadline 9.0h).",
+          "summary": "T1 broke down; its unfinished work was released. Reassigned: J05 T1\u2192T3, J06 T1\u2192T3. J01 cannot be done: T3 is fully booked with higher-value work (T3 would finish J01 at 17.2h (incl. refuel stop), deadline 8.0h). J04 cannot be done: T3 is fully booked with higher-value work (T3 would finish J04 at 18.6h (incl. refuel stop), deadline 12.0h).",
           "highlight_jobs": [
+            "J01",
             "J04",
             "J05",
-            "J06",
-            "J07"
+            "J06"
           ]
         }
       },
       {
-        "time": 2.4,
+        "time": 2.03,
         "kind": "job_done",
-        "message": "T3 finished J01",
+        "message": "T3 finished J07",
         "data": {}
       },
       {
@@ -2127,7 +2223,7 @@
         "data": {}
       },
       {
-        "time": 3.46,
+        "time": 3.44,
         "kind": "job_started",
         "message": "T3 started J03",
         "data": {}
@@ -2139,7 +2235,7 @@
         "data": {}
       },
       {
-        "time": 4.96,
+        "time": 4.94,
         "kind": "job_done",
         "message": "T3 finished J03",
         "data": {}
@@ -2151,13 +2247,13 @@
         "data": {}
       },
       {
-        "time": 6.21,
+        "time": 6.19,
         "kind": "refuel_started",
         "message": "T3 refuelling at the depot before J05",
         "data": {}
       },
       {
-        "time": 6.46,
+        "time": 6.44,
         "kind": "refueled",
         "message": "T3 refuelled, heading to J05",
         "data": {}
@@ -2169,7 +2265,7 @@
         "data": {}
       },
       {
-        "time": 8.77,
+        "time": 8.75,
         "kind": "job_started",
         "message": "T3 started J05",
         "data": {}
@@ -2181,19 +2277,19 @@
         "data": {}
       },
       {
-        "time": 10.27,
+        "time": 10.25,
         "kind": "job_done",
         "message": "T3 finished J05",
         "data": {}
       },
       {
-        "time": 11.27,
+        "time": 11.25,
         "kind": "job_started",
         "message": "T3 started J06",
         "data": {}
       },
       {
-        "time": 12.27,
+        "time": 12.25,
         "kind": "job_done",
         "message": "T3 finished J06",
         "data": {}

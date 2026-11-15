@@ -44,9 +44,9 @@ export function OrchestrationView({ log, explanations }: OrchestrationViewProps)
 
   return (
     <div className="flex flex-col gap-3">
-      <ViewHeader title="Agents" description="Every tractor has its own agent. They bid for jobs, trade them and confirm their queues; the safety gate has the last word."
+      <ViewHeader title="Agents" description="Every tractor has its own agent. The Fleet Agent runs the auction, the Navigation Agent routes, the Safety Agent has the last word."
         actions={<button type="button" onClick={runFaultTest}
-          className="flex items-center gap-1.5 rounded-lg border border-sky-300/40 px-3 py-1.5 text-xs font-bold text-sky-300 hover:bg-sky-400/10"><ShieldIcon size={14} />Test the safety gate</button>} />
+          className="flex items-center gap-1.5 rounded-lg border border-sky-300/40 px-3 py-1.5 text-xs font-bold text-sky-300 hover:bg-sky-400/10"><ShieldIcon size={14} />Test the Safety Agent</button>} />
 
       <ul className="grid gap-2 md:grid-cols-3">
         {PRINCIPLES.map((p) => (

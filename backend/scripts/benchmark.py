@@ -14,7 +14,7 @@ from statistics import mean
 from fleet.engine import metrics, run_to_end, start
 from fleet.scenario import random_scenario
 
-COLUMNS = ("jobs_completed", "priority1_completed", "priority_score", "travel_hours", "idle_hours", "refuel_stops", "invariant_violations")
+COLUMNS = ("jobs_completed", "priority1_completed", "priority_score", "travel_hours", "travel_per_job", "idle_hours", "refuel_stops", "invariant_violations")
 STRATEGIES = ("coordinator", "baseline", "edf")
 
 
@@ -32,6 +32,9 @@ def run_benchmark(n: int) -> dict:
         scenario = random_scenario(seed)
         rows.append({"seed": seed, **{s: metrics(run_to_end(start(scenario, s))) for s in STRATEGIES}})
     summary = {s: {col: round(mean(r[s][col] for r in rows), 2) for col in COLUMNS} for s in STRATEGIES}
+    for s in STRATEGIES:  # per job over the whole benchmark, so shifts with no finished job cannot skew it
+        done = sum(r[s]["jobs_completed"] for r in rows)
+        summary[s]["travel_per_job"] = round(sum(r[s]["travel_hours"] for r in rows) / done, 2) if done else 0.0
     summary["coordinator"]["invariant_violations_total"] = sum(r["coordinator"]["invariant_violations"] for r in rows)
     vs_fcfs = _versus(rows, "baseline")
     return {

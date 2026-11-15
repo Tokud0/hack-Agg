@@ -1,0 +1,1275 @@
+{
+  "n": 50,
+  "summary": {
+    "coordinator": {
+      "jobs_completed": 6.32,
+      "priority1_completed": 2.6,
+      "travel_hours": 6.59,
+      "idle_hours": 3.26,
+      "invariant_violations": 0,
+      "invariant_violations_total": 0
+    },
+    "baseline": {
+      "jobs_completed": 4.84,
+      "priority1_completed": 1.72,
+      "travel_hours": 7.19,
+      "idle_hours": 3.52,
+      "invariant_violations": 0
+    }
+  },
+  "wins": 42,
+  "ties": 8,
+  "losses": 0,
+  "rows": [
+    {
+      "seed": 0,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 3,
+        "travel_hours": 5.87,
+        "idle_hours": 1.83,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 7.35
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 2,
+        "travel_hours": 6.78,
+        "idle_hours": 3.52,
+        "unassignable": 2,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.85
+      }
+    },
+    {
+      "seed": 1,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 1,
+        "travel_hours": 7.65,
+        "idle_hours": 1.71,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.6
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 0,
+        "travel_hours": 7.55,
+        "idle_hours": 5.95,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.55
+      }
+    },
+    {
+      "seed": 2,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 8,
+        "priority1_completed": 1,
+        "travel_hours": 7.94,
+        "idle_hours": 2.46,
+        "unassignable": 2,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.9
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 1,
+        "travel_hours": 9.29,
+        "idle_hours": 0.91,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.4
+      }
+    },
+    {
+      "seed": 3,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 1,
+        "travel_hours": 8.87,
+        "idle_hours": 4.93,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 9.6
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 1,
+        "travel_hours": 7.98,
+        "idle_hours": 3.52,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.95
+      }
+    },
+    {
+      "seed": 4,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 4,
+        "travel_hours": 6.32,
+        "idle_hours": 3.69,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.35
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 4,
+        "travel_hours": 7.31,
+        "idle_hours": 5.09,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.55
+      }
+    },
+    {
+      "seed": 5,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 4,
+        "travel_hours": 5.76,
+        "idle_hours": 1.24,
+        "unassignable": 6,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 5.3
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 2,
+        "travel_hours": 8.24,
+        "idle_hours": 0.86,
+        "unassignable": 6,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 6.65
+      }
+    },
+    {
+      "seed": 6,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 8,
+        "priority1_completed": 3,
+        "travel_hours": 4.81,
+        "idle_hours": 3.89,
+        "unassignable": 2,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 9.05
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 2,
+        "travel_hours": 5.66,
+        "idle_hours": 3.74,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.95
+      }
+    },
+    {
+      "seed": 7,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 2,
+        "travel_hours": 5.03,
+        "idle_hours": 5.34,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 7.25
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 3,
+        "travel_hours": 6.12,
+        "idle_hours": 5.38,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.15
+      }
+    },
+    {
+      "seed": 8,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 1,
+        "travel_hours": 5.62,
+        "idle_hours": 4.08,
+        "unassignable": 6,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 6.05
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 3,
+        "priority1_completed": 0,
+        "travel_hours": 5.38,
+        "idle_hours": 5.07,
+        "unassignable": 6,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 6.55
+      }
+    },
+    {
+      "seed": 9,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 4,
+        "travel_hours": 6.87,
+        "idle_hours": 5.23,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 6.95
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 3,
+        "travel_hours": 7.14,
+        "idle_hours": 7.16,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.85
+      }
+    },
+    {
+      "seed": 10,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 4,
+        "travel_hours": 6.83,
+        "idle_hours": 0.67,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 5.65
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 2,
+        "travel_hours": 11.41,
+        "idle_hours": 0.95,
+        "unassignable": 6,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.55
+      }
+    },
+    {
+      "seed": 11,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 3,
+        "travel_hours": 4.84,
+        "idle_hours": 8.6,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.55
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 3,
+        "priority1_completed": 2,
+        "travel_hours": 5.01,
+        "idle_hours": 6.79,
+        "unassignable": 7,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 6.7
+      }
+    },
+    {
+      "seed": 12,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 2,
+        "travel_hours": 6.36,
+        "idle_hours": 4.74,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.45
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 3,
+        "priority1_completed": 2,
+        "travel_hours": 7.62,
+        "idle_hours": 6.58,
+        "unassignable": 6,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.85
+      }
+    },
+    {
+      "seed": 13,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 8,
+        "priority1_completed": 0,
+        "travel_hours": 5.42,
+        "idle_hours": 1.38,
+        "unassignable": 2,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 7.35
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 0,
+        "travel_hours": 6.77,
+        "idle_hours": 0.63,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 6.65
+      }
+    },
+    {
+      "seed": 14,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 3,
+        "travel_hours": 7.97,
+        "idle_hours": 5.53,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.8
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 2,
+        "travel_hours": 7.52,
+        "idle_hours": 3.78,
+        "unassignable": 6,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.0
+      }
+    },
+    {
+      "seed": 15,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 3,
+        "travel_hours": 4.92,
+        "idle_hours": 3.28,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 7.3
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 2,
+        "travel_hours": 6.62,
+        "idle_hours": 2.58,
+        "unassignable": 2,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.05
+      }
+    },
+    {
+      "seed": 16,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 2,
+        "travel_hours": 6.05,
+        "idle_hours": 3.45,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 7.9
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 2,
+        "travel_hours": 6.16,
+        "idle_hours": 1.84,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 6.75
+      }
+    },
+    {
+      "seed": 17,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 8,
+        "priority1_completed": 5,
+        "travel_hours": 7.0,
+        "idle_hours": 0.63,
+        "unassignable": 2,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.75
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 3,
+        "travel_hours": 5.84,
+        "idle_hours": 1.36,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.95
+      }
+    },
+    {
+      "seed": 18,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 0,
+        "travel_hours": 6.44,
+        "idle_hours": 5.26,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 9.2
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 3,
+        "priority1_completed": 0,
+        "travel_hours": 7.47,
+        "idle_hours": 2.83,
+        "unassignable": 7,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 6.75
+      }
+    },
+    {
+      "seed": 19,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 9,
+        "priority1_completed": 5,
+        "travel_hours": 6.15,
+        "idle_hours": 3.15,
+        "unassignable": 1,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.5
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 2,
+        "travel_hours": 6.64,
+        "idle_hours": 4.96,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.45
+      }
+    },
+    {
+      "seed": 20,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 2,
+        "travel_hours": 3.72,
+        "idle_hours": 6.08,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.35
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 1,
+        "travel_hours": 4.5,
+        "idle_hours": 5.9,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.55
+      }
+    },
+    {
+      "seed": 21,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 4,
+        "travel_hours": 8.09,
+        "idle_hours": 1.21,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 7.45
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 4,
+        "travel_hours": 8.49,
+        "idle_hours": 3.21,
+        "unassignable": 2,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.15
+      }
+    },
+    {
+      "seed": 22,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 0,
+        "travel_hours": 6.82,
+        "idle_hours": 3.58,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.55
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 0,
+        "travel_hours": 8.72,
+        "idle_hours": 0.88,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.05
+      }
+    },
+    {
+      "seed": 23,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 3,
+        "travel_hours": 6.88,
+        "idle_hours": 1.67,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 7.65
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 3,
+        "travel_hours": 8.2,
+        "idle_hours": 3.5,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.4
+      }
+    },
+    {
+      "seed": 24,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 1,
+        "travel_hours": 6.57,
+        "idle_hours": 3.13,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 7.3
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 1,
+        "travel_hours": 7.76,
+        "idle_hours": 3.14,
+        "unassignable": 6,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.5
+      }
+    },
+    {
+      "seed": 25,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 0,
+        "travel_hours": 8.31,
+        "idle_hours": 3.73,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.85
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 0,
+        "travel_hours": 8.22,
+        "idle_hours": 3.58,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.85
+      }
+    },
+    {
+      "seed": 26,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 8,
+        "priority1_completed": 3,
+        "travel_hours": 8.91,
+        "idle_hours": 0.99,
+        "unassignable": 2,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.25
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 1,
+        "travel_hours": 10.1,
+        "idle_hours": 4.1,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.75
+      }
+    },
+    {
+      "seed": 27,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 4,
+        "travel_hours": 7.61,
+        "idle_hours": 1.99,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.15
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 2,
+        "travel_hours": 7.64,
+        "idle_hours": 2.56,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.35
+      }
+    },
+    {
+      "seed": 28,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 5,
+        "travel_hours": 4.9,
+        "idle_hours": 3.1,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 7.7
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 2,
+        "travel_hours": 4.7,
+        "idle_hours": 0.99,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 5.65
+      }
+    },
+    {
+      "seed": 29,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 0,
+        "travel_hours": 8.75,
+        "idle_hours": 1.25,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.55
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 0,
+        "travel_hours": 7.56,
+        "idle_hours": 3.74,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.8
+      }
+    },
+    {
+      "seed": 30,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 1,
+        "travel_hours": 7.57,
+        "idle_hours": 3.03,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.2
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 0,
+        "travel_hours": 7.85,
+        "idle_hours": 3.85,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.45
+      }
+    },
+    {
+      "seed": 31,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 8,
+        "priority1_completed": 6,
+        "travel_hours": 8.43,
+        "idle_hours": 0.14,
+        "unassignable": 2,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 7.2
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 4,
+        "travel_hours": 7.66,
+        "idle_hours": 2.54,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.1
+      }
+    },
+    {
+      "seed": 32,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 3,
+        "travel_hours": 5.07,
+        "idle_hours": 1.99,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 4.75
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 2,
+        "travel_hours": 6.61,
+        "idle_hours": 3.79,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 6.15
+      }
+    },
+    {
+      "seed": 33,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 2,
+        "travel_hours": 5.18,
+        "idle_hours": 1.07,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 6.45
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 3,
+        "priority1_completed": 1,
+        "travel_hours": 4.88,
+        "idle_hours": 3.82,
+        "unassignable": 6,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 5.65
+      }
+    },
+    {
+      "seed": 34,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 3,
+        "travel_hours": 5.72,
+        "idle_hours": 2.78,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 6.5
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 1,
+        "travel_hours": 6.7,
+        "idle_hours": 2.7,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 6.15
+      }
+    },
+    {
+      "seed": 35,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 4,
+        "travel_hours": 5.55,
+        "idle_hours": 5.55,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.4
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 3,
+        "travel_hours": 5.63,
+        "idle_hours": 3.97,
+        "unassignable": 6,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 6.8
+      }
+    },
+    {
+      "seed": 36,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 4,
+        "travel_hours": 8.03,
+        "idle_hours": 2.53,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.25
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 2,
+        "travel_hours": 6.99,
+        "idle_hours": 0.41,
+        "unassignable": 6,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 5.3
+      }
+    },
+    {
+      "seed": 37,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 2,
+        "travel_hours": 7.05,
+        "idle_hours": 3.55,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 6.8
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 1,
+        "travel_hours": 6.7,
+        "idle_hours": 3.2,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 6.15
+      }
+    },
+    {
+      "seed": 38,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 4,
+        "travel_hours": 7.13,
+        "idle_hours": 3.77,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.35
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 1,
+        "travel_hours": 8.86,
+        "idle_hours": 5.74,
+        "unassignable": 6,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.7
+      }
+    },
+    {
+      "seed": 39,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 2,
+        "travel_hours": 7.16,
+        "idle_hours": 0.13,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 7.2
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 1,
+        "travel_hours": 8.54,
+        "idle_hours": 0.96,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.15
+      }
+    },
+    {
+      "seed": 40,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 3,
+        "travel_hours": 4.98,
+        "idle_hours": 9.31,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 9.3
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 3,
+        "priority1_completed": 2,
+        "travel_hours": 4.82,
+        "idle_hours": 9.98,
+        "unassignable": 6,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.65
+      }
+    },
+    {
+      "seed": 41,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 3,
+        "travel_hours": 7.78,
+        "idle_hours": 4.51,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.8
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 4,
+        "travel_hours": 7.77,
+        "idle_hours": 1.23,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 6.55
+      }
+    },
+    {
+      "seed": 42,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 3,
+        "travel_hours": 8.27,
+        "idle_hours": 3.18,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.75
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 2,
+        "travel_hours": 7.53,
+        "idle_hours": 4.42,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.15
+      }
+    },
+    {
+      "seed": 43,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 2,
+        "travel_hours": 6.8,
+        "idle_hours": 9.1,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 9.1
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 3,
+        "priority1_completed": 2,
+        "travel_hours": 6.67,
+        "idle_hours": 6.93,
+        "unassignable": 7,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 6.8
+      }
+    },
+    {
+      "seed": 44,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 3,
+        "travel_hours": 6.37,
+        "idle_hours": 2.13,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.1
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 1,
+        "travel_hours": 7.52,
+        "idle_hours": 3.09,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.35
+      }
+    },
+    {
+      "seed": 45,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 3,
+        "travel_hours": 6.32,
+        "idle_hours": 0.68,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 6.5
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 3,
+        "travel_hours": 8.41,
+        "idle_hours": 1.39,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 7.15
+      }
+    },
+    {
+      "seed": 46,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 2,
+        "travel_hours": 7.35,
+        "idle_hours": 1.05,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 6.25
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 1,
+        "travel_hours": 7.67,
+        "idle_hours": 0.33,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 6.05
+      }
+    },
+    {
+      "seed": 47,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 6,
+        "priority1_completed": 3,
+        "travel_hours": 8.33,
+        "idle_hours": 3.77,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 8.9
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 4,
+        "priority1_completed": 3,
+        "travel_hours": 7.95,
+        "idle_hours": 4.65,
+        "unassignable": 5,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.35
+      }
+    },
+    {
+      "seed": 48,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 1,
+        "travel_hours": 5.09,
+        "idle_hours": 3.51,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 6.35
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 5,
+        "priority1_completed": 1,
+        "travel_hours": 5.58,
+        "idle_hours": 2.52,
+        "unassignable": 4,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 4.85
+      }
+    },
+    {
+      "seed": 49,
+      "coordinator": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 3,
+        "travel_hours": 4.09,
+        "idle_hours": 3.51,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 2,
+        "makespan_hours": 7.35
+      },
+      "baseline": {
+        "jobs_total": 10,
+        "jobs_completed": 7,
+        "priority1_completed": 2,
+        "travel_hours": 6.66,
+        "idle_hours": 5.14,
+        "unassignable": 3,
+        "invariant_violations": 0,
+        "replans": 0,
+        "makespan_hours": 8.9
+      }
+    }
+  ]
+}

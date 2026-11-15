@@ -40,6 +40,10 @@ export const BoltIcon = (p: IconProps) => <svg {...base(p)}><path d="M13 2L4 14h
 export const FuelIcon = (p: IconProps) => <svg {...base(p)}><path d="M4 21V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v16M3 21h12M14 9h2l3 3v6a1.5 1.5 0 0 1-3 0v-3" /><path d="M7 8h4" /></svg>
 export const CloseIcon = (p: IconProps) => <svg {...base(p)}><path d="M6 6l12 12M18 6L6 18" /></svg>
 export const UploadIcon = (p: IconProps) => <svg {...base(p)}><path d="M12 21V9M7 14l5-5 5 5M5 3h14" /></svg>
+export const MapIcon = (p: IconProps) => <svg {...base(p)}><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2z" /><path d="M9 4v14M15 6v14" /></svg>
+export const TimelineIcon = (p: IconProps) => <svg {...base(p)}><path d="M4 6h9M8 12h11M5 18h7" /></svg>
+export const ArrowRightIcon = (p: IconProps) => <svg {...base(p)}><path d="M4 12h15M13 6l6 6-6 6" /></svg>
+export const FlowIcon = (p: IconProps) => <svg {...base(p)}><circle cx="5" cy="12" r="2.5" /><circle cx="19" cy="6" r="2.5" /><circle cx="19" cy="18" r="2.5" /><path d="M7.5 12h4l3-5h2M11.5 12l3 5h2" /></svg>
 export const PlusIcon = (p: IconProps) => <svg {...base(p)}><path d="M12 5v14M5 12h14" /></svg>
 
 export function JobTypeIcon({ type, size = 14, ...rest }: IconProps & { type: string }) {

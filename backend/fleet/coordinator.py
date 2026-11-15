@@ -10,7 +10,8 @@ from __future__ import annotations
 
 import random
 from collections.abc import Callable
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
+from typing import Literal
 
 from .feasibility import QueueEval, StartContext, evaluate_queue, start_context
 from .models import Job, JobStatus, Plan, Tractor, TractorStatus, World
@@ -118,19 +119,27 @@ def unassignable_reason(inp: PlanningInput, queues: dict[str, tuple[str, ...]], 
 
 
 Queues = dict[str, tuple[str, ...]]
+# Award rule of a construction round: cheapest insertion, or soonest finish when appended.
+AwardRule = Literal["cheapest", "soonest"]
+# Observers let the agent transcript watch the search without changing it.
+AwardObserver = Callable[[str, Queues, "str | None", AwardRule], None]  # job, queues before, winner, rule
+TradeObserver = Callable[[Queues, Queues, float], None]  # queues before, queues after, score gain
+Build = Callable[["AwardObserver | None"], Queues]
 
 
-def greedy(inp: PlanningInput, order: tuple[str, ...] | None = None) -> Queues:
+def greedy(inp: PlanningInput, order: tuple[str, ...] | None = None, observe: AwardObserver | None = None) -> Queues:
     """Cheapest feasible insertion of each job, in the given order."""
     queues: Queues = {t.id: () for t in inp.tractors}
     for job_id in order or inp.pool:
         best = best_insertion(inp, queues, job_id)
+        if observe:
+            observe(job_id, queues, best[0] if best else None, "cheapest")
         if best is not None:
             queues = {**queues, best[0]: best[1]}
     return queues
 
 
-def earliest_deadline_schedule(inp: PlanningInput) -> Queues:
+def earliest_deadline_schedule(inp: PlanningInput, observe: AwardObserver | None = None) -> Queues:
     """Jobs by deadline, each appended to the tractor that can finish it soonest."""
     jobs = inp.world.jobs
     queues: Queues = {t.id: () for t in inp.tractors}
@@ -140,38 +149,60 @@ def earliest_deadline_schedule(inp: PlanningInput) -> Queues:
             ev = _eval(inp, t, queues[t.id] + (job_id,))
             if ev.ok:
                 options.append((ev.finish_times[job_id], t.id))
+        if observe:
+            observe(job_id, queues, min(options)[1] if options else None, "soonest")
         if options:
             _, tid = min(options)
             queues = {**queues, tid: queues[tid] + (job_id,)}
     return queues
 
 
-def _starting_plans(inp: PlanningInput) -> list[Callable[[], Queues]]:
+@dataclass(frozen=True)
+class Candidate:
+    """One starting plan of the multi-start search and where local search took it."""
+
+    name: str
+    start_score: float | None
+    score: float | None
+    jobs_assigned: int
+    is_winner: bool = False
+
+
+def _starting_plans(inp: PlanningInput) -> list[tuple[str, Build]]:
     jobs = inp.world.jobs
     by_deadline = tuple(sorted(inp.pool, key=lambda j: (jobs[j].deadline, jobs[j].priority, j)))
     by_slack = tuple(sorted(inp.pool, key=lambda j: (jobs[j].deadline - jobs[j].remaining_hours, j)))
-    starts: list[Callable[[], Queues]] = [
-        lambda: greedy(inp),
-        lambda: greedy(inp, by_deadline),
-        lambda: greedy(inp, by_slack),
-        lambda: earliest_deadline_schedule(inp),
+    starts: list[tuple[str, Build]] = [
+        ("priority order", lambda observe=None: greedy(inp, observe=observe)),
+        ("deadline order", lambda observe=None: greedy(inp, by_deadline, observe)),
+        ("least slack first", lambda observe=None: greedy(inp, by_slack, observe)),
+        ("earliest-deadline schedule", lambda observe=None: earliest_deadline_schedule(inp, observe)),
     ]
     for seed in range(SHUFFLED_STARTS):
         shuffled = list(inp.pool)
         random.Random(seed).shuffle(shuffled)
-        starts.append(lambda order=tuple(shuffled): greedy(inp, order))
+        starts.append((f"shuffled order #{seed + 1}", lambda observe=None, order=tuple(shuffled): greedy(inp, order, observe)))
     return starts
 
 
-def best_plan(inp: PlanningInput, iterations: int) -> Queues:
+def search(inp: PlanningInput, iterations: int) -> tuple[Queues, tuple[Candidate, ...]]:
+    """Improve every starting plan; return the best one plus the record of all candidates."""
     best_queues: Queues = {t.id: () for t in inp.tractors}
     best_score = score_plan(inp, best_queues) or 0.0
-    for build in _starting_plans(inp):
-        queues = local_search(inp, build(), iterations)
+    winner: int | None = None
+    candidates: list[Candidate] = []
+    for name, build in _starting_plans(inp):
+        start = build(None)
+        queues = local_search(inp, start, iterations)
         score = score_plan(inp, queues)
+        candidates.append(Candidate(name, score_plan(inp, start), score, sum(len(q) for q in queues.values())))
         if score is not None and score > best_score + 1e-6:
-            best_queues, best_score = queues, score
-    return best_queues
+            best_queues, best_score, winner = queues, score, len(candidates) - 1
+    return best_queues, tuple(replace(c, is_winner=i == winner) for i, c in enumerate(candidates))
+
+
+def best_plan(inp: PlanningInput, iterations: int) -> Queues:
+    return search(inp, iterations)[0]
 
 
 def _neighbours(inp: PlanningInput, queues: dict[str, tuple[str, ...]]):
@@ -207,7 +238,7 @@ def _neighbours(inp: PlanningInput, queues: dict[str, tuple[str, ...]]):
 
 
 def local_search(
-    inp: PlanningInput, queues: dict[str, tuple[str, ...]], iterations: int
+    inp: PlanningInput, queues: dict[str, tuple[str, ...]], iterations: int, observe: TradeObserver | None = None
 ) -> dict[str, tuple[str, ...]]:
     """First-improvement hill climbing with a fixed iteration cap (deterministic)."""
     current = queues
@@ -219,6 +250,8 @@ def local_search(
         for candidate in _neighbours(inp, current):
             s = score_plan(inp, candidate)
             if s is not None and s > current_score + 1e-6:
+                if observe:
+                    observe(current, candidate, s - current_score)
                 current, current_score, improved = candidate, s, True
                 break
         if not improved:
@@ -226,14 +259,38 @@ def local_search(
     return current
 
 
+def replay_winner(
+    inp: PlanningInput,
+    candidates: tuple[Candidate, ...],
+    on_award: AwardObserver,
+    on_trade: TradeObserver,
+    iterations: int = DEFAULT_ITERATIONS,
+) -> None:
+    """Re-run only the winning candidate with observers attached.
+
+    The search is deterministic, so the replay takes exactly the steps of the first run.
+    """
+    for candidate, (_, build) in zip(candidates, _starting_plans(inp)):
+        if candidate.is_winner:
+            local_search(inp, build(on_award), iterations, on_trade)
+
+
 def plan(world: World, network: RoadNetwork, iterations: int = DEFAULT_ITERATIONS) -> Plan:
+    return plan_with_trace(world, network, iterations)[0]
+
+
+def plan_with_trace(
+    world: World, network: RoadNetwork, iterations: int = DEFAULT_ITERATIONS
+) -> tuple[Plan, tuple[Candidate, ...]]:
+    """The plan plus every candidate the search considered (for the orchestration trace)."""
     inp = build_input(world, network)
-    queues = best_plan(inp, iterations)
+    queues, candidates = search(inp, iterations)
     assigned = {jid for q in queues.values() for jid in q}
     unassignable = {jid: unassignable_reason(inp, queues, jid) for jid in inp.pool if jid not in assigned}
     broken = {tid: () for tid, t in world.tractors.items() if t.status == TractorStatus.BROKEN}
-    return Plan(
+    result = Plan(
         queues={**broken, **queues},
         unassignable=unassignable,
         score=score_plan(inp, queues) or 0.0,
     )
+    return result, candidates

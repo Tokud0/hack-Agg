@@ -101,3 +101,41 @@ def test_strict_schema_requires_every_property():
     schema = provider.strict_schema(CopilotReply)
     event = schema["$defs"]["ProposedEvent"]
     assert set(event["required"]) == set(event["properties"]) and event["additionalProperties"] is False
+
+
+def test_replan_log_entry_carries_the_orchestration_trace(client):
+    res = client.post("/api/events", json={"type": "breakdown", "tractor_id": "T1", "source": "copilot"})
+    replan = res.json()["replan"]
+    trace = replan["trace"]
+    assert set(trace) == {"sense", "plan", "verify", "dispatch"}
+    assert "T1" not in trace["sense"]["tractors_available"]
+    assert sum(c["is_winner"] for c in trace["plan"]["candidates"]) == 1
+    assert trace["verify"]["accepted"] is True
+    assert replan["diff"]["trigger"]["source"] == "copilot"
+
+
+def test_fault_test_is_vetoed_without_changing_the_plan(client):
+    before = client.get("/api/state").json()["runs"]["coordinator"]["tractors"]
+    res = client.post("/api/orchestration/fault-test")
+    assert res.status_code == 200
+    body = res.json()
+    assert body["accepted"] is False and body["violations"]
+    assert client.get("/api/state").json()["runs"]["coordinator"]["tractors"] == before
+
+
+def test_live_replans_carry_the_agent_conversation(client):
+    client.post("/api/control", json={"action": "reset"})
+    log = client.get("/api/state").json()["runs"]["coordinator"]["log"]
+    messages = next(e for e in log if e["kind"] == "replan")["data"]["messages"]
+    assert {m["phase"] for m in messages} >= {"situation", "auction", "approval"}
+    assert any(m["kind"] == "claim" for m in messages)
+
+
+def test_tractor_agent_answers_from_its_own_messages(client):
+    res = client.post("/api/agents/T3/ask", json={"question": "What is your plan?"})
+    assert res.status_code == 200
+    assert res.json()["source"] == "template" and "planning round" in res.json()["answer"]
+
+
+def test_asking_an_unknown_tractor_is_a_404(client):
+    assert client.post("/api/agents/T9/ask", json={"question": "hi"}).status_code == 404

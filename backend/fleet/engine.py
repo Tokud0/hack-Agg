@@ -5,10 +5,10 @@ from __future__ import annotations
 from dataclasses import asdict, dataclass, field, replace
 from typing import Literal
 
-from . import baseline
+from . import agents, baseline
 from .coordinator import PRIORITY_WEIGHT
 from .diff import diff_plans
-from .models import Job, JobStatus, World
+from .models import Job, JobStatus, TractorStatus, World
 from .replan import block_road, break_tractor, change_priority, replan
 from .routing import RoadNetwork, build_network
 from .scenario import EventIn, ScenarioIn, to_world
@@ -36,6 +36,8 @@ class Run:
     pending_events: tuple[EventIn, ...] = ()
     violations_total: int = 0
     replans: int = 0
+    # Record the agents' conversation of every re-plan (costs one extra planner round).
+    record_messages: bool = False
 
 
 def _with_log(run: Run, *entries: LogEntry) -> Run:
@@ -43,8 +45,11 @@ def _with_log(run: Run, *entries: LogEntry) -> Run:
 
 
 def _replan_entry(run: Run, trigger: dict, released: dict[str, str]) -> Run:
+    open_jobs = sorted(j.id for j in run.world.jobs.values() if j.status != JobStatus.DONE)
+    available = sorted(t.id for t in run.world.tractors.values() if t.status != TractorStatus.BROKEN)
     result = replan(run.world, run.network)
     diff = diff_plans(result.world, result.previous_plan, result.plan, trigger, released)
+    messages = agents.transcript(run.world, run.network, trigger, released, result) if run.record_messages else ()
     entry = LogEntry(
         time=round(run.world.time, 2),
         kind="replan",
@@ -55,6 +60,25 @@ def _replan_entry(run: Run, trigger: dict, released: dict[str, str]) -> Run:
             "accepted": result.accepted,
             "invariants": {"checked": list(result.report.checked), "violations": list(result.report.violations)},
             "diff": diff.to_dict(),
+            "messages": [asdict(m) for m in messages],
+            "trace": {
+                "sense": {
+                    "open_jobs": open_jobs,
+                    "tractors_available": available,
+                    "released": sorted(released),
+                    "blocked_roads": len(run.world.blocked_roads),
+                },
+                "plan": {
+                    "duration_ms": round(result.duration_ms, 2),
+                    "score": round(result.plan.score, 1),
+                    "candidates": [asdict(c) for c in result.candidates],
+                },
+                "verify": {"duration_ms": round(result.verify_ms, 2), "accepted": result.accepted},
+                "dispatch": {
+                    "jobs_changed": len(diff.changes),
+                    "unassignable": sorted(result.plan.unassignable),
+                },
+            },
         },
     )
     return replace(
@@ -65,12 +89,15 @@ def _replan_entry(run: Run, trigger: dict, released: dict[str, str]) -> Run:
     )
 
 
-def start(scenario: ScenarioIn, strategy: Strategy, with_demo_events: bool = True) -> Run:
+def start(
+    scenario: ScenarioIn, strategy: Strategy, with_demo_events: bool = True, record_messages: bool = False
+) -> Run:
     world = to_world(scenario)
     run = Run(
         strategy=strategy,
         world=world,
         network=build_network(world),
+        record_messages=record_messages,
         pending_events=tuple(sorted(scenario.demo_events, key=lambda e: e.at)) if with_demo_events else (),
     )
     run = _with_log(run, LogEntry(0.0, "start", f"Shift started ({strategy})"))

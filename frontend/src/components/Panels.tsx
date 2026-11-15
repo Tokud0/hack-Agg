@@ -1,6 +1,7 @@
 import { AnimatePresence, animate, motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { Explanation, LogEntry, Metrics, ReplanData } from '../types'
+import { INVARIANT_LABELS } from '../labels'
 import { clock } from '../theme'
 import { ShieldIcon, SparkIcon } from './Icons'
 
@@ -35,7 +36,7 @@ type CounterKey = 'jobs_completed' | 'priority1_completed' | 'travel_hours' | 'i
 
 const COUNTERS: { key: CounterKey; label: string; suffix: string; decimals: number; higherIsBetter: boolean }[] = [
   { key: 'jobs_completed', label: 'Done on time', suffix: '', decimals: 0, higherIsBetter: true },
-  { key: 'priority1_completed', label: 'Urgent (P1) done', suffix: '', decimals: 0, higherIsBetter: true },
+  { key: 'priority1_completed', label: 'Urgent (P1)', suffix: '', decimals: 0, higherIsBetter: true },
   { key: 'travel_hours', label: 'Driving', suffix: 'h', decimals: 1, higherIsBetter: false },
   { key: 'idle_hours', label: 'Standing idle', suffix: 'h', decimals: 1, higherIsBetter: false },
 ]
@@ -75,13 +76,6 @@ export function Counters({ metrics, accent, compareTo }: CountersProps) {
 }
 
 /* ---------- invariant checks ---------- */
-
-const INVARIANT_LABELS: Record<string, string> = {
-  one_tractor_per_job: 'Each job has at most one tractor',
-  done_never_reassigned: 'Completed work never reassigned',
-  hard_constraints: 'Implement · fuel · deadline respected',
-  every_open_job_accounted: 'No work lost: reassigned or flagged',
-}
 
 export function InvariantPanel({ replan, entryIndex }: { replan?: Partial<ReplanData>; entryIndex: number }) {
   const checked = replan?.invariants?.checked ?? Object.keys(INVARIANT_LABELS)

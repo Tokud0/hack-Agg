@@ -50,6 +50,8 @@ class EventIn(BaseModel):
     b: str | None = None
     job_id: str | None = None
     priority: int | None = None
+    # Who raised it: "operator" (button) or "copilot" (LLM proposal the operator confirmed).
+    source: str | None = None
 
 
 class ScenarioIn(BaseModel):

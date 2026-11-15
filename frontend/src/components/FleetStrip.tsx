@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import type { Job, Tractor } from '../types'
 import { tractorColor } from '../theme'
-import { AlertIcon, BoltIcon, FuelIcon, JobTypeIcon } from './Icons'
+import { AlertIcon, BoltIcon, ChatIcon, FuelIcon, JobTypeIcon } from './Icons'
 
 const STATUS_PILL: Record<string, { label: string; cls: string }> = {
   idle: { label: 'Idle', cls: 'bg-white/10 text-white/60' },
@@ -16,9 +16,13 @@ interface FleetStripProps {
   jobs: Job[]
   onBreak: (tractorId: string) => void
   onSelectJob: (jobId: string) => void
+  /** One card per row, for a narrow side column. */
+  isStacked?: boolean
+  /** Latest thing each tractor's agent said, by tractor id. */
+  lastWords?: Record<string, string>
 }
 
-function TractorCard({ t, jobs, onBreak, onSelectJob }: { t: Tractor; jobs: Map<string, Job> } & Omit<FleetStripProps, 'tractors' | 'jobs'>) {
+function TractorCard({ t, jobs, said, onBreak, onSelectJob }: { t: Tractor; jobs: Map<string, Job>; said?: string } & Pick<FleetStripProps, 'onBreak' | 'onSelectJob'>) {
   const color = t.status === 'broken' ? '#ff5d5d' : tractorColor(t.id)
   const fuelShare = Math.max(0, Math.min(1, t.fuel / t.fuel_capacity))
   const current = t.current_job ? jobs.get(t.current_job) : undefined
@@ -70,6 +74,12 @@ function TractorCard({ t, jobs, onBreak, onSelectJob }: { t: Tractor; jobs: Map<
         ))}
       </div>
 
+      {said && (
+        <p className="mt-2 flex gap-1.5 rounded-md bg-white/5 px-2 py-1.5 text-[11px] leading-snug text-white/65" title={`${t.id}'s agent, last planning round`}>
+          <ChatIcon size={12} className="mt-0.5 shrink-0" style={{ color }} />{said}
+        </p>
+      )}
+
       {t.status !== 'broken' && (
         <button type="button" onClick={() => onBreak(t.id)}
           className="mt-2 flex w-full items-center justify-center gap-1 rounded-md border border-alarm/30 py-1 text-[11px] font-semibold text-alarm/80 hover:bg-alarm/15 hover:text-alarm">
@@ -80,11 +90,11 @@ function TractorCard({ t, jobs, onBreak, onSelectJob }: { t: Tractor; jobs: Map<
   )
 }
 
-export function FleetStrip({ tractors, jobs, onBreak, onSelectJob }: FleetStripProps) {
+export function FleetStrip({ tractors, jobs, onBreak, onSelectJob, isStacked = false, lastWords }: FleetStripProps) {
   const byId = new Map(jobs.map((j) => [j.id, j]))
   return (
-    <div className="grid grid-cols-1 gap-3 md:grid-cols-3">
-      {tractors.map((t) => <TractorCard key={t.id} t={t} jobs={byId} onBreak={onBreak} onSelectJob={onSelectJob} />)}
+    <div className={`grid grid-cols-1 gap-3 ${isStacked ? '' : 'md:grid-cols-3'}`}>
+      {tractors.map((t) => <TractorCard key={t.id} t={t} jobs={byId} said={lastWords?.[t.id]} onBreak={onBreak} onSelectJob={onSelectJob} />)}
     </div>
   )
 }

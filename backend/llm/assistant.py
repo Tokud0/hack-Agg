@@ -95,6 +95,32 @@ def explain_replan(diff: dict) -> tuple[Explanation, str]:
     return (result, source) if isinstance(result, Explanation) else (template_explanation(diff), "template")
 
 
+# --- ask one tractor agent ---------------------------------------------------
+
+AGENT_SYSTEM = """You are the on-board agent of one tractor in a farm fleet. The operator asks you a question.
+You get JSON facts: your id, your current status, and every message you sent or received in the last
+planning round (announcements, your bids and passes, awards, claims, trades, your confirmed queue).
+Answer in first person, in 2-3 short sentences. Quote the actual numbers and job ids from your messages.
+If the facts do not contain the answer, say you do not know."""
+
+
+class AgentAnswer(BaseModel):
+    answer: str
+
+
+def template_agent_answer(facts: dict) -> str:
+    own = [m["text"] for m in facts["messages"] if m["from"] == facts["tractor_id"]]
+    if not own:
+        return "I took no part in the last planning round."
+    return f"Here is what I said in the last planning round: {' '.join(own[-3:])}"
+
+
+def ask_tractor(facts: dict, question: str) -> tuple[str, str]:
+    payload = json.dumps({"question": question, **facts}, sort_keys=True)
+    result, source = _ask(AGENT_SYSTEM, payload, AgentAnswer)
+    return (result.answer, source) if isinstance(result, AgentAnswer) else (template_agent_answer(facts), "template")
+
+
 # --- "why?" ------------------------------------------------------------------
 
 WHY_SYSTEM = """You answer an operator asking why a job was assigned the way it was.

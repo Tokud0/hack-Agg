@@ -5,7 +5,7 @@ from __future__ import annotations
 import time
 from dataclasses import dataclass, replace
 
-from .coordinator import plan as coordinate
+from .coordinator import Candidate, plan_with_trace
 from .invariants import InvariantReport, check_plan
 from .models import Job, JobStatus, Plan, TractorStatus, World
 from .routing import RoadNetwork, build_network
@@ -19,6 +19,16 @@ class ReplanResult:
     report: InvariantReport
     accepted: bool
     duration_ms: float
+    verify_ms: float = 0.0
+    candidates: tuple[Candidate, ...] = ()
+
+
+@dataclass(frozen=True)
+class FaultTest:
+    """A deliberately broken plan shown to the safety gate, and what the gate said."""
+
+    fault: str
+    report: InvariantReport
 
 
 def current_plan(world: World) -> Plan:
@@ -50,12 +60,37 @@ def replan(world: World, network: RoadNetwork | None = None) -> ReplanResult:
     network = network or build_network(world)
     previous = current_plan(world)
     started = time.perf_counter()
-    new_plan = coordinate(world, network)
-    duration_ms = (time.perf_counter() - started) * 1000
+    new_plan, candidates = plan_with_trace(world, network)
+    planned = time.perf_counter()
     report = check_plan(world, new_plan, network)
+    duration_ms = (planned - started) * 1000
+    verify_ms = (time.perf_counter() - planned) * 1000
     if not report.ok:
-        return ReplanResult(world, previous, previous, report, False, duration_ms)
-    return ReplanResult(apply_plan(world, new_plan), new_plan, previous, report, True, duration_ms)
+        return ReplanResult(world, previous, previous, report, False, duration_ms, verify_ms, candidates)
+    return ReplanResult(apply_plan(world, new_plan), new_plan, previous, report, True, duration_ms, verify_ms, candidates)
+
+
+def fault_test(world: World, network: RoadNetwork | None = None) -> FaultTest | None:
+    """Hand the safety gate a corrupted copy of the live plan. The world is never changed.
+
+    Returns None when there is nothing left to corrupt (no planned or finished job).
+    """
+    network = network or build_network(world)
+    live = current_plan(world)
+    working = [tid for tid in sorted(world.tractors) if world.tractors[tid].status != TractorStatus.BROKEN]
+    planned = [(tid, jid) for tid in working for jid in live.queues.get(tid, ())]
+    others = [(tid, jid, other) for tid, jid in planned for other in working if other != tid]
+    if others:
+        owner, job_id, other = others[0]
+        fault = f"{job_id} (already on {owner}) was also given to {other}"
+    else:
+        done = sorted(j.id for j in world.jobs.values() if j.status == JobStatus.DONE)
+        if not done or not working:
+            return None
+        job_id, other = done[0], working[0]
+        fault = f"finished job {job_id} was planned again on {other}"
+    bad = replace(live, queues={**live.queues, other: live.queues.get(other, ()) + (job_id,)})
+    return FaultTest(fault=fault, report=check_plan(world, bad, network))
 
 
 def _release(job: Job, tractor_id: str, now: float) -> Job:

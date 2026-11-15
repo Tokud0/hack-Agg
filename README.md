@@ -24,21 +24,44 @@ Without an API key everything still works: explanations come from templates, and
 
 ## Dashboard
 
-- **Baseline vs coordinator** shown side by side on the same scenario, with live counters and the coordinator's lead over the baseline.
-- **Map**: fields fill in as they are worked, each tractor has a fuel ring and a planned route, hovering a tractor shows its status, and arrows show work handed over after a breakdown.
-- **Fleet status cards** for every tractor, each with a *Simulate breakdown* button.
-- **Schedule (Gantt)**: blocks slide between tractors on a re-plan; deadlines and events are marked.
-- **Safety checks**: the 4 invariants and how long the re-plan took, updated after every re-plan.
-- **What changed & why**: an AI explanation of every re-plan.
-- **Tools**:
-  - *Copilot chat*: ask questions or report events, then confirm them.
-  - *Add jobs*: free text turned into editable drafts, a manual form, or a scenario JSON upload.
-  - *Events & what-if*: forecast a disruption without touching the live plan, or apply it now.
+Five pages, one top bar (run, clock, speed) and one side panel that stay in place:
+
+- **Live**: the coordinator's map (fields fill in as they are worked, fuel rings, planned routes, hand-over arrows after a breakdown), live counters with the lead over the baseline, and a card per tractor with a *Simulate breakdown* button.
+- **Agents**: the orchestration pipeline, replayable for every re-plan of the shift (see below).
+- **Schedule**: Gantt by tractor (deadlines and events marked) and the full job table, for the coordinator or either baseline.
+- **Compare**: baseline (FCFS or EDF) and coordinator side by side on the same shift, plus the 50-shift benchmark.
+- **Log**: every event, re-plan and finished job, with event-log export.
+- **Side panel**: *Re-plan* (AI explanation and the 4 safety checks of the latest re-plan), *Copilot* chat, *Add jobs* (free text, form or scenario JSON), *Events* (apply a disruption or forecast it with what-if).
 - Click any job for **"why?"**: the score breakdown and every rejected alternative.
+
+## Orchestration: five agents, one direction
+
+Every event goes through the same pipeline, and every step is recorded in the event log (`trace` on each `replan` entry):
+
+| # | Agent | Kind | Job | Limit |
+|---|-------|------|-----|-------|
+| 1 | Intake | LLM + human | Turns a chat message or a button press into a typed event | Can only propose; the operator confirms |
+| 2 | Planner | Deterministic search | Builds 8 starting plans, improves each by local search, keeps the best score | Same input, same plan; no LLM inside |
+| 3 | Safety gate | Hard rules | Checks the 4 invariants on the winning plan | Has a veto: a failed plan is discarded and the last valid plan stays |
+| 4 | Dispatcher | Deterministic code | Applies the approved queues to the tractors | Only runs plans the gate approved |
+| 5 | Explainer | LLM | Tells the operator what changed and why | Reads the result; cannot change the plan |
+
+### One agent per tractor, and how they talk
+
+Inside the Planner step every tractor has its own agent (`backend/fleet/agents.py`). Each answers only for itself (position, fuel, implement, queue), and each re-plan is a conversation in four phases:
+
+1. **Situation**: a broken tractor announces it and releases its jobs; every other tractor reports where it is and what it keeps.
+2. **Auction**: the coordinator calls each job; every tractor replies with a bid (finish time, extra driving) or passes with the reason (wrong implement, fuel, deadline); the best bid wins and the winner claims the job so no one else plans for it.
+3. **Negotiation**: tractors trade or swap jobs whenever that improves the whole plan.
+4. **Approval**: the safety gate approves or vetoes; tractors confirm their queues.
+
+The messages are recorded by observing the planner, not written after the fact: a test rebuilds the final plan from the claims and trades alone, and another checks every award went to the lowest bid. Bids are computed by the same feasibility code as the plan, so the benchmark is unchanged. The LLM takes no decisions here; on the Agents page you can pick one tractor and ask its agent a question, and the LLM answers in first person from that agent's own messages (`POST /api/agents/{id}/ask`).
+
+The **Agents** page shows this for any re-plan: the full conversation (filter by agent), what triggered it and who raised it, every candidate plan with its score before and after improvement, the checks, who got which job, the explanation, and the time each step took. *Test the safety gate* hands the gate a deliberately corrupted copy of the live plan (`POST /api/orchestration/fault-test`) and shows the veto; the live plan is not touched.
 
 ```bash
 cd backend
-.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 44 tests
+.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 60 tests
 .venv/bin/python -m scripts.benchmark --n 50       # coordinator vs baseline table
 .venv/bin/python -m scripts.export_demo            # writes results/
 ```

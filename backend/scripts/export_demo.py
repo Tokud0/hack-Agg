@@ -22,7 +22,7 @@ def main() -> None:
     scenario = load_scenario(ROOT / "backend" / "scenario.json")
     demo = {}
     for strategy in ("baseline", "edf", "coordinator"):
-        run = run_to_end(start(scenario, strategy))
+        run = run_to_end(start(scenario, strategy, record_messages=True))
         log = log_as_dicts(run)
         for entry in log:
             if entry["kind"] == "replan":

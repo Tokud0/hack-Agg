@@ -40,7 +40,7 @@ export function JobTable({ jobs, highlight, onSelectJob }: JobTableProps) {
               <td><span className={`rounded border px-1 text-[10px] font-bold ${PRIORITY_STYLE[j.priority]}`}>P{j.priority}</span></td>
               <td className="font-mono text-white/60">{clock(j.deadline)}</td>
               <td>{j.tractor_id ? <span className="font-bold" style={{ color: tractorColor(j.tractor_id) }}>{j.tractor_id}</span> : '—'}</td>
-              <td>
+              <td className="pr-4">
                 <div className="h-1.5 rounded-full bg-white/10">
                   <div className="h-full rounded-full bg-leaf transition-[width] duration-300" style={{ width: `${j.progress * 100}%` }} />
                 </div>

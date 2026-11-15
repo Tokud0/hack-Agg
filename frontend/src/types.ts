@@ -65,11 +65,49 @@ export interface JobChange {
   progress: number
 }
 
+export interface PlanCandidate {
+  name: string
+  start_score: number | null
+  score: number | null
+  jobs_assigned: number
+  is_winner: boolean
+}
+
+/** What each stage of the re-plan pipeline saw and produced. */
+export interface ReplanTrace {
+  sense: { open_jobs: string[]; tractors_available: string[]; released: string[]; blocked_roads: number }
+  plan: { duration_ms: number; score: number; candidates: PlanCandidate[] }
+  verify: { duration_ms: number; accepted: boolean }
+  dispatch: { jobs_changed: number; unassignable: string[] }
+}
+
+export type MessagePhase = 'situation' | 'auction' | 'negotiation' | 'approval'
+
+/** One message between agents during a re-plan. Sender and receiver are a tractor id, "coordinator", "safety_gate" or "all". */
+export interface AgentMessage {
+  sender: string
+  to: string
+  kind: string
+  phase: MessagePhase
+  text: string
+  topic: string
+  data: { is_winner?: boolean; accepted?: boolean } & Record<string, unknown>
+}
+
 export interface ReplanData {
   duration_ms: number
   accepted: boolean
   invariants: { checked: string[]; violations: string[] }
   diff: { trigger: Record<string, string | number>; time: number; changes: JobChange[] }
+  trace: ReplanTrace
+  messages: AgentMessage[]
+}
+
+export interface FaultTestResult {
+  fault: string
+  accepted: boolean
+  checked: string[]
+  violations: string[]
 }
 
 export interface LogEntry {
@@ -96,6 +134,7 @@ export interface Explanation {
   summary: string
   highlight_jobs: string[]
   source: string
+  latency_ms?: number
 }
 
 export interface SessionView {
@@ -120,6 +159,8 @@ export interface ProposedEvent {
   b?: string
   job_id?: string
   priority?: number
+  /** Who raised it; the copilot's proposals are tagged so the trace can show it. */
+  source?: 'operator' | 'copilot'
 }
 
 export interface WhyFacts {

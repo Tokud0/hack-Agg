@@ -59,7 +59,7 @@ export function Copilot() {
 
   const apply = async (m: Message) => {
     try {
-      for (const e of m.events ?? []) await api.event(e)
+      for (const e of m.events ?? []) await api.event({ ...e, source: 'copilot' })
       resolve(m.id, 'applied')
     } catch (err) {
       push({ role: 'system', text: `Rejected by the coordinator: ${errorText(err)}` })

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { JobDraft, MapInfo, ProposedEvent, SessionView, WhatIfResult, WhyFacts } from './types'
+import type { FaultTestResult, JobDraft, MapInfo, ProposedEvent, SessionView, WhatIfResult, WhyFacts } from './types'
 
 const RECONNECT_MS = 1000
 
@@ -40,6 +40,9 @@ export const api = {
   whatIf: (event: ProposedEvent) => request<WhatIfResult>('/api/whatif', { method: 'POST', body: JSON.stringify(event) }),
   uploadScenario: (scenario: unknown) =>
     request<{ ok: boolean; scenario: string; jobs: number }>('/api/scenario', { method: 'POST', body: JSON.stringify(scenario) }),
+  askAgent: (tractorId: string, question: string) =>
+    request<{ answer: string; source: string }>(`/api/agents/${tractorId}/ask`, { method: 'POST', body: JSON.stringify({ question }) }),
+  faultTest: () => request<FaultTestResult>('/api/orchestration/fault-test', { method: 'POST' }),
   benchmark: () => request<BenchmarkResult>('/api/benchmark'),
 }
 

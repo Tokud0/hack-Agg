@@ -8,7 +8,8 @@ from fleet.engine import apply_event, metrics, run_to_end, start
 from fleet.feasibility import StartContext, evaluate_queue
 from fleet.invariants import check_plan
 from fleet.models import JobStatus, Plan, TractorStatus
-from fleet.replan import block_road, break_tractor, replan
+from fleet.replan import block_road, break_tractor, current_plan, fault_test, replan
+from fleet.agents import transcript
 from fleet.routing import build_network
 from fleet.scenario import EventIn, ScenarioIn, load_scenario, random_scenario, to_world
 
@@ -223,3 +224,80 @@ def test_simulated_refuel_matches_plan(world):
     for job in run.world.jobs.values():
         if job.status == JobStatus.DONE:
             assert job.completed_at <= job.deadline + 1e-6
+
+
+# --- orchestration trace -----------------------------------------------------
+
+
+def test_replan_records_every_candidate_and_exactly_one_winner(world):
+    result = replan(world)
+    assert len(result.candidates) >= 4
+    winners = [c for c in result.candidates if c.is_winner]
+    assert len(winners) == 1
+    assert winners[0].score == max(c.score for c in result.candidates if c.score is not None)
+
+
+def test_fault_test_is_rejected_and_leaves_the_world_untouched(world):
+    planned = replan(world).world
+    result = fault_test(planned)
+    assert result is not None and not result.report.ok
+    assert any("one_tractor_per_job" in v for v in result.report.violations)
+    assert current_plan(planned) == current_plan(replan(world).world)
+
+
+def test_fault_test_has_nothing_to_corrupt_before_any_plan(world):
+    assert fault_test(world) is None
+
+
+# --- agent conversation ------------------------------------------------------
+
+
+def _replay_queues(messages) -> dict[str, tuple[str, ...]]:
+    """Rebuild the plan from the conversation alone: claims, then trades."""
+    queues: dict[str, tuple[str, ...]] = {}
+    for m in messages:
+        if m.kind == "claim":
+            queues = {**queues, m.sender: tuple(m.data["queue"])}
+        elif "queues" in m.data:
+            queues = {tid: tuple(q) for tid, q in m.data["queues"].items()}
+    return queues
+
+
+def _conversation(world, trigger=None, released=None):
+    network = build_network(world)
+    result = replan(world, network)
+    return result, transcript(world, network, trigger or {"type": "initial_plan"}, released or {}, result)
+
+
+def test_conversation_alone_reproduces_the_plan(world):
+    result, messages = _conversation(world)
+    replayed = _replay_queues(messages)
+    assert {tid: q for tid, q in result.plan.queues.items() if q} == {tid: q for tid, q in replayed.items() if q}
+
+
+def test_every_award_goes_to_the_lowest_bid(world):
+    _, messages = _conversation(world)
+    awards = [m for m in messages if m.kind == "award"]
+    assert awards
+    for award in awards:
+        bids = [m for m in messages if m.kind == "bid" and m.topic == award.topic]
+        best = min(bids, key=lambda m: m.data["value"])
+        assert best.sender == award.to and best.data["is_winner"]
+
+
+def test_every_working_tractor_answers_every_announcement(world):
+    _, messages = _conversation(world)
+    for announce in (m for m in messages if m.kind == "announce"):
+        answered = {m.sender for m in messages if m.topic == announce.topic and m.kind in ("bid", "decline")}
+        assert answered == set(world.tractors)
+
+
+def test_broken_tractor_announces_release_and_stays_out_of_the_auction(world):
+    planned = replan(world).world
+    released = {jid: "T1" for jid in planned.tractors["T1"].queue}
+    broken = break_tractor(planned, "T1")
+    result, messages = _conversation(broken, {"type": "breakdown", "tractor_id": "T1"}, released)
+    assert messages[0].sender == "T1" and messages[0].kind == "alert"
+    assert not [m for m in messages if m.sender == "T1" and m.kind in ("bid", "decline", "ack")]
+    assert _replay_queues(messages).get("T3", ()) == result.plan.queues["T3"]
+    assert messages[-1].kind == "ack" and any(m.kind == "verdict" and m.data["accepted"] for m in messages)

@@ -10,7 +10,7 @@ from pathlib import Path
 
 from fleet.engine import log_as_dicts, metrics, run_to_end, start
 from fleet.scenario import load_scenario
-from llm.claude import template_explanation
+from llm.assistant import template_explanation
 from scripts.benchmark import run_benchmark
 
 ROOT = Path(__file__).resolve().parents[2]

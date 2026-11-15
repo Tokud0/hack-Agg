@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { MapInfo, ProposedEvent, SessionView, WhyFacts } from './types'
+import type { JobDraft, MapInfo, ProposedEvent, SessionView, WhatIfResult, WhyFacts } from './types'
 
 const RECONNECT_MS = 1000
 
@@ -17,7 +17,7 @@ async function request<T>(path: string, init?: RequestInit): Promise<T> {
 
 export const api = {
   map: () => request<MapInfo>('/api/map'),
-  health: () => request<{ ok: boolean; llm: boolean }>('/api/health'),
+  health: () => request<{ ok: boolean; llm: boolean; provider: string }>('/api/health'),
   control: (action: 'play' | 'pause' | 'reset' | 'speed', speed?: number) =>
     request('/api/control', { method: 'POST', body: JSON.stringify({ action, speed }) }),
   event: (event: ProposedEvent) => request('/api/events', { method: 'POST', body: JSON.stringify(event) }),
@@ -25,11 +25,21 @@ export const api = {
     request<{ facts: WhyFacts; answer: string; source: string }>(
       `/api/why/${jobId}${question ? `?question=${encodeURIComponent(question)}` : ''}`,
     ),
-  copilot: (message: string) =>
+  copilot: (message: string, history: { role: 'operator' | 'copilot'; text: string }[]) =>
     request<{ reply: string; events: ProposedEvent[]; source: string }>('/api/copilot', {
       method: 'POST',
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, history }),
     }),
+  addJob: (job: { type: string; field_id: string; priority: number; deadline: number; work_hours: number }) =>
+    request<{ ok: boolean; job_id: string }>('/api/jobs', { method: 'POST', body: JSON.stringify(job) }),
+  parseJobs: (text: string) =>
+    request<{ jobs: JobDraft[]; note: string; source: string }>('/api/jobs/parse', {
+      method: 'POST',
+      body: JSON.stringify({ text }),
+    }),
+  whatIf: (event: ProposedEvent) => request<WhatIfResult>('/api/whatif', { method: 'POST', body: JSON.stringify(event) }),
+  uploadScenario: (scenario: unknown) =>
+    request<{ ok: boolean; scenario: string; jobs: number }>('/api/scenario', { method: 'POST', body: JSON.stringify(scenario) }),
   benchmark: () => request<BenchmarkResult>('/api/benchmark'),
 }
 

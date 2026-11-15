@@ -17,8 +17,6 @@ export function clock(hours: number): string {
   return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
 }
 
-export const JOB_ICON: Record<string, string> = { spray: '💧', mow: '🌾' }
-
 export const PRIORITY_STYLE: Record<number, string> = {
   1: 'bg-alarm/20 text-alarm border-alarm/40',
   2: 'bg-wheat/15 text-wheat border-wheat/40',

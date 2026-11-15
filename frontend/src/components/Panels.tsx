@@ -2,6 +2,7 @@ import { AnimatePresence, animate, motion } from 'framer-motion'
 import { useEffect, useRef, useState } from 'react'
 import type { Explanation, LogEntry, Metrics, ReplanData } from '../types'
 import { clock } from '../theme'
+import { ShieldIcon, SparkIcon } from './Icons'
 
 /* ---------- animated number ---------- */
 
@@ -26,15 +27,37 @@ export function AnimatedNumber({ value, decimals = 0 }: { value: number; decimal
 interface CountersProps {
   metrics: Metrics
   accent: string
+  /** When given, shows how far ahead of this run we are. */
+  compareTo?: Metrics
 }
 
-export function Counters({ metrics, accent }: CountersProps) {
-  const items = [
-    { label: 'Done on time', value: metrics.jobs_completed, suffix: `/${metrics.jobs_total}`, decimals: 0 },
-    { label: 'P1 done', value: metrics.priority1_completed, suffix: '', decimals: 0 },
-    { label: 'Travel', value: metrics.travel_hours, suffix: 'h', decimals: 1 },
-    { label: 'Idle', value: metrics.idle_hours, suffix: 'h', decimals: 1 },
-  ]
+type CounterKey = 'jobs_completed' | 'priority1_completed' | 'travel_hours' | 'idle_hours'
+
+const COUNTERS: { key: CounterKey; label: string; suffix: string; decimals: number; higherIsBetter: boolean }[] = [
+  { key: 'jobs_completed', label: 'Done on time', suffix: '', decimals: 0, higherIsBetter: true },
+  { key: 'priority1_completed', label: 'Urgent (P1) done', suffix: '', decimals: 0, higherIsBetter: true },
+  { key: 'travel_hours', label: 'Driving', suffix: 'h', decimals: 1, higherIsBetter: false },
+  { key: 'idle_hours', label: 'Standing idle', suffix: 'h', decimals: 1, higherIsBetter: false },
+]
+
+function Delta({ value, decimals, higherIsBetter }: { value: number; decimals: number; higherIsBetter: boolean }) {
+  if (Math.abs(value) < 10 ** -decimals / 2) return null
+  const good = higherIsBetter ? value > 0 : value < 0
+  return (
+    <motion.span key={value.toFixed(decimals)} initial={{ scale: 1.3 }} animate={{ scale: 1 }}
+      className={`ml-1 rounded px-1 text-[10px] font-bold ${good ? 'bg-leaf/15 text-leaf' : 'bg-alarm/15 text-alarm'}`}>
+      {value > 0 ? '+' : ''}{value.toFixed(decimals)}
+    </motion.span>
+  )
+}
+
+export function Counters({ metrics, accent, compareTo }: CountersProps) {
+  const items = COUNTERS.map((c) => ({
+    ...c,
+    value: metrics[c.key],
+    suffix: c.key === 'jobs_completed' ? `/${metrics.jobs_total}` : c.suffix,
+    delta: compareTo ? metrics[c.key] - compareTo[c.key] : 0,
+  }))
   return (
     <div className="grid grid-cols-4 gap-2">
       {items.map((it) => (
@@ -43,6 +66,7 @@ export function Counters({ metrics, accent }: CountersProps) {
           <div className="font-mono text-lg font-bold" style={{ color: accent }}>
             <AnimatedNumber value={it.value} decimals={it.decimals} />
             <span className="text-xs text-white/40">{it.suffix}</span>
+            {compareTo && <Delta value={it.delta} decimals={it.decimals} higherIsBetter={it.higherIsBetter} />}
           </div>
         </div>
       ))}
@@ -65,7 +89,7 @@ export function InvariantPanel({ replan, entryIndex }: { replan?: Partial<Replan
   return (
     <div className="panel p-3">
       <div className="mb-2 flex items-center justify-between">
-        <h3 className="text-xs font-bold uppercase tracking-widest text-white/60">Safety invariants</h3>
+        <h3 className="flex items-center gap-1.5 text-xs font-bold uppercase tracking-widest text-white/60"><ShieldIcon size={14} className="text-leaf" />Safety checks</h3>
         {replan?.duration_ms !== undefined && (
           <motion.span key={entryIndex} initial={{ scale: 1.4, opacity: 0 }} animate={{ scale: 1, opacity: 1 }}
             className="rounded-full bg-leaf/15 px-2 py-0.5 font-mono text-[11px] text-leaf">
@@ -129,15 +153,13 @@ export function ExplanationCard({ explanation, pending, onHover }: ExplanationCa
       <div className="mb-1 flex items-center justify-between">
         <h3 className="text-xs font-bold uppercase tracking-widest text-white/60">What changed & why</h3>
         {explanation && (
-          <span className={`rounded px-1.5 py-0.5 text-[10px] font-semibold ${explanation.source === 'claude' ? 'bg-wheat/20 text-wheat' : 'bg-white/10 text-white/50'}`}>
-            {explanation.source === 'claude' ? '✦ Claude' : 'template'}
-          </span>
+          <SourceBadge source={explanation.source} />
         )}
       </div>
       <AnimatePresence mode="wait">
         {pending && !explanation ? (
           <motion.div key="pending" className="flex items-center gap-2 py-3 text-sm text-white/50" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-            <span className="blink">●</span> Claude is reading the plan diff…
+            <span className="blink">●</span> AI is reading the plan change…
           </motion.div>
         ) : explanation ? (
           <motion.div key={explanation.summary} initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }}>
@@ -154,6 +176,19 @@ export function ExplanationCard({ explanation, pending, onHover }: ExplanationCa
         )}
       </AnimatePresence>
     </div>
+  )
+}
+
+/* ---------- AI source badge ---------- */
+
+const SOURCE_LABEL: Record<string, string> = { groq: 'AI · Groq', claude: 'AI · Claude', template: 'rule-based' }
+
+export function SourceBadge({ source }: { source: string }) {
+  const isAi = source !== 'template'
+  return (
+    <span className={`inline-flex items-center gap-1 rounded px-1.5 py-0.5 text-[10px] font-semibold ${isAi ? 'bg-wheat/20 text-wheat' : 'bg-white/10 text-white/50'}`}>
+      {isAi && <SparkIcon size={10} />}{SOURCE_LABEL[source] ?? source}
+    </span>
   )
 }
 

@@ -1,5 +1,6 @@
 import type { Job } from '../types'
-import { JOB_ICON, PRIORITY_STYLE, clock, tractorColor } from '../theme'
+import { PRIORITY_STYLE, clock, tractorColor } from '../theme'
+import { JobTypeIcon } from './Icons'
 
 const STATUS_STYLE: Record<string, string> = {
   pending: 'text-white/50',
@@ -7,6 +8,14 @@ const STATUS_STYLE: Record<string, string> = {
   in_progress: 'text-wheat',
   done: 'text-leaf',
   unassignable: 'text-alarm',
+}
+
+const STATUS_LABEL: Record<string, string> = {
+  pending: 'waiting',
+  assigned: 'planned',
+  in_progress: 'in progress',
+  done: 'done',
+  unassignable: 'cannot be done',
 }
 
 interface JobTableProps {
@@ -26,7 +35,7 @@ export function JobTable({ jobs, highlight, onSelectJob }: JobTableProps) {
           {jobs.map((j) => (
             <tr key={j.id} onClick={() => onSelectJob(j.id)}
               className={`cursor-pointer border-b border-white/5 hover:bg-white/5 ${highlight?.has(j.id) ? 'bg-wheat/10' : ''}`}>
-              <td className="py-1 font-mono font-bold">{JOB_ICON[j.type]} {j.id}</td>
+              <td className="py-1 font-mono font-bold"><span className="inline-flex items-center gap-1.5"><JobTypeIcon type={j.type} size={12} className="text-white/50" />{j.id}</span></td>
               <td>{j.field_id}</td>
               <td><span className={`rounded border px-1 text-[10px] font-bold ${PRIORITY_STYLE[j.priority]}`}>P{j.priority}</span></td>
               <td className="font-mono text-white/60">{clock(j.deadline)}</td>
@@ -36,8 +45,9 @@ export function JobTable({ jobs, highlight, onSelectJob }: JobTableProps) {
                   <div className="h-full rounded-full bg-leaf transition-[width] duration-300" style={{ width: `${j.progress * 100}%` }} />
                 </div>
               </td>
-              <td className={STATUS_STYLE[j.status]} title={j.reason ?? undefined}>
-                {j.status.replace('_', ' ')}{j.status === 'unassignable' && ' ⓘ'}
+              <td className={STATUS_STYLE[j.status]}>
+                <div>{STATUS_LABEL[j.status]}</div>
+                {j.reason && <div className="max-w-[260px] truncate text-[10px] text-alarm/70" title={j.reason}>{j.reason}</div>}
               </td>
             </tr>
           ))}

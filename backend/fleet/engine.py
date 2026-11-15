@@ -7,7 +7,7 @@ from typing import Literal
 
 from . import baseline
 from .diff import diff_plans
-from .models import JobStatus, World
+from .models import Job, JobStatus, World
 from .replan import block_road, break_tractor, change_priority, replan
 from .routing import RoadNetwork, build_network
 from .scenario import EventIn, ScenarioIn, to_world
@@ -152,3 +152,18 @@ def metrics(run: Run) -> dict:
 
 def log_as_dicts(run: Run) -> list[dict]:
     return [asdict(e) for e in run.log]
+
+
+def add_job(run: Run, job: Job) -> Run:
+    """Operator adds work mid-shift; the coordinator re-plans, the baseline queues it."""
+    if job.id in run.world.jobs:
+        raise ValueError(f"job {job.id} already exists")
+    if job.field_id not in run.world.fields:
+        raise ValueError(f"unknown field {job.field_id}")
+    world = replace(run.world, jobs={**run.world.jobs, job.id: job})
+    trigger = {"type": "add_job", "job_id": job.id, "field_id": job.field_id, "priority": job.priority}
+    entry = LogEntry(round(world.time, 2), "event", f"New job {job.id}: {job.type} {job.field_id}, P{job.priority}", trigger)
+    run = _with_log(replace(run, world=world), entry)
+    if run.strategy == "coordinator":
+        run = _replan_entry(run, trigger, {})
+    return run

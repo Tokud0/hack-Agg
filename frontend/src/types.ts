@@ -91,7 +91,7 @@ export interface Explanation {
   headline: string
   summary: string
   highlight_jobs: string[]
-  source: 'claude' | 'template'
+  source: string
 }
 
 export interface SessionView {
@@ -106,6 +106,7 @@ export interface MapInfo {
   depot: { id: string; x: number; y: number }
   fields: { id: string; x: number; y: number }[]
   speeds: number[]
+  shift_start_hour: number
 }
 
 export interface ProposedEvent {
@@ -135,4 +136,33 @@ export interface WhyFacts {
   fuel_after?: number
   fuel_capacity?: number
   alternatives: { tractor_id: string; feasible: boolean; reason: string; added_cost?: number }[]
+}
+
+export interface JobDraft {
+  type: 'spray' | 'mow'
+  field_id: string
+  priority: number
+  deadline_hours: number
+  work_hours: number
+}
+
+export interface ForecastMetrics {
+  jobs_completed: number
+  priority1_completed: number
+  travel_hours: number
+  idle_hours: number
+}
+
+export interface WhatIfResult {
+  facts: {
+    event: ProposedEvent
+    at_hours: number
+    current: ForecastMetrics
+    what_if: ForecastMetrics
+    lost_jobs: { job_id: string; reason: string }[]
+    gained_jobs: string[]
+  }
+  headline: string
+  answer: string
+  source: string
 }

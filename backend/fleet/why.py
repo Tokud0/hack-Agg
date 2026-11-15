@@ -31,8 +31,13 @@ def _alternatives(world: World, network: RoadNetwork, job_id: str, owner: str | 
         only_this = {**{k: () for k in queues}, tid: queues[tid]}
         best = best_insertion(inp, only_this, job_id)
         if best is None:
-            ev = evaluate_queue(tractor, inp.starts[tid], queues[tid] + (job_id,), world.jobs, network)
-            result.append({"tractor_id": tid, "feasible": False, "reason": ev.reason or "no feasible slot"})
+            alone = evaluate_queue(tractor, inp.starts[tid], (job_id,), world.jobs, network)
+            if not alone.ok:
+                reason = alone.reason or "no feasible slot"
+            else:
+                queued = evaluate_queue(tractor, inp.starts[tid], queues[tid] + (job_id,), world.jobs, network)
+                reason = f"fully booked with higher-value work ({queued.reason})"
+            result.append({"tractor_id": tid, "feasible": False, "reason": reason})
         else:
             result.append(
                 {"tractor_id": tid, "feasible": True, "added_cost": round(best[2], 1),

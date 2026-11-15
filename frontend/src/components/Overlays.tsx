@@ -4,6 +4,8 @@ import { Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } fro
 import { api, type BenchmarkResult } from '../api'
 import type { WhyFacts } from '../types'
 import { tractorColor } from '../theme'
+import { CloseIcon } from './Icons'
+import { SourceBadge } from './Panels'
 
 function Backdrop({ onClose, children }: { onClose: () => void; children: React.ReactNode }) {
   return (
@@ -49,10 +51,10 @@ export function WhyDrawer({ jobId, onClose }: { jobId: string; onClose: () => vo
           <div className="text-xs uppercase tracking-widest text-white/50">Why this assignment?</div>
           <h2 className="text-2xl font-extrabold">{jobId} {f && <span className="text-white/50">· {f.type} {f.field_id} · P{f.priority}</span>}</h2>
         </div>
-        <button type="button" onClick={onClose} className="rounded-lg bg-white/10 px-3 py-1 text-sm hover:bg-white/20">Close</button>
+        <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg bg-white/10 p-1.5 hover:bg-white/20"><CloseIcon size={16} /></button>
       </div>
       {error && <div className="mt-4 text-alarm">{error}</div>}
-      {!data && !error && <div className="blink mt-6 text-white/50">● asking the coordinator and Claude…</div>}
+      {!data && !error && <div className="blink mt-6 text-white/50">● asking the coordinator and the AI…</div>}
       {f && (
         <>
           <div className="mt-4 flex items-center gap-3">
@@ -70,7 +72,7 @@ export function WhyDrawer({ jobId, onClose }: { jobId: string; onClose: () => vo
             </div>
           )}
           <div className="mt-5 rounded-xl border border-wheat/25 bg-wheat/5 p-4">
-            <div className="mb-1 text-[10px] uppercase tracking-widest text-wheat">{data?.source === 'claude' ? '✦ Claude explains' : 'Explanation'}</div>
+            <div className="mb-2 flex items-center gap-2 text-[10px] uppercase tracking-widest text-wheat">Explanation {data && <SourceBadge source={data.source} />}</div>
             <p className="text-[15px] leading-relaxed">{data?.answer}</p>
           </div>
           <h3 className="mt-5 text-xs font-bold uppercase tracking-widest text-white/50">Alternatives the coordinator rejected</h3>
@@ -78,7 +80,8 @@ export function WhyDrawer({ jobId, onClose }: { jobId: string; onClose: () => vo
             {f.alternatives.map((a) => (
               <li key={a.tractor_id} className="flex items-center gap-3 text-sm">
                 <span className="w-8 rounded text-center font-bold text-black" style={{ background: tractorColor(a.tractor_id) }}>{a.tractor_id}</span>
-                <span className={a.feasible ? 'text-wheat' : 'text-white/70'}>{a.feasible ? '◐' : '✕'} {a.reason}</span>
+                <span className={`rounded px-1.5 text-[10px] font-bold ${a.feasible ? 'bg-wheat/15 text-wheat' : 'bg-alarm/15 text-alarm'}`}>{a.feasible ? 'POSSIBLE' : 'REJECTED'}</span>
+                <span className="text-white/70">{a.reason}</span>
               </li>
             ))}
             {f.alternatives.length === 0 && <li className="text-sm text-white/40">No alternatives to compare.</li>}
@@ -115,7 +118,7 @@ export function BenchmarkModal({ onClose }: { onClose: () => void }) {
           <div className="text-xs uppercase tracking-widest text-white/50">Benchmark · {data?.n ?? 50} random scenarios · same breakdowns</div>
           <h2 className="text-2xl font-extrabold">Coordinator vs first-come-first-served</h2>
         </div>
-        <button type="button" onClick={onClose} className="rounded-lg bg-white/10 px-3 py-1 text-sm hover:bg-white/20">Close</button>
+        <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg bg-white/10 p-1.5 hover:bg-white/20"><CloseIcon size={16} /></button>
       </div>
       {error && <div className="mt-4 text-alarm">{error}</div>}
       {!data && !error && <div className="blink mt-6 text-white/50">● running 100 simulations…</div>}

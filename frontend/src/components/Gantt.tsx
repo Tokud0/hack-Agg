@@ -1,6 +1,7 @@
 import { motion } from 'framer-motion'
 import type { GanttBlock, RunSnapshot } from '../types'
-import { JOB_ICON, clock, tractorColor } from '../theme'
+import { clock, tractorColor } from '../theme'
+import { JobTypeIcon } from './Icons'
 
 const WIDTH = 1000
 const LABEL_W = 70
@@ -48,7 +49,7 @@ export function Gantt({ run, highlight, onSelectJob }: GanttProps) {
             <text x={26} y={y + LANE_H / 2 + 16} fontSize={8} fill="#7d8f83">{t.implement}</text>
             {broken && (
               <text x={WIDTH - 14} y={y + LANE_H / 2 + 4} fontSize={11} fill="#ff5d5d" textAnchor="end" fontWeight={700}>
-                ⚠ BROKEN DOWN
+                BROKEN DOWN
               </text>
             )}
           </g>
@@ -74,10 +75,10 @@ export function Gantt({ run, highlight, onSelectJob }: GanttProps) {
               animate={{ width: w }} transition={{ type: 'spring', stiffness: 120, damping: 18 }} />
             {b.kind === 'interrupted' && <line x1={w} y1={-2} x2={w} y2={h + 2} stroke="#ff5d5d" strokeWidth={2.5} />}
             {w > 34 && (
-              <text x={7} y={h / 2 + 4} fontSize={11} fontWeight={700}
-                fill={b.kind === 'done' || b.kind === 'active' ? '#0a100c' : '#e6efe8'}>
-                {job ? `${JOB_ICON[job.type]} ${job.id}` : b.job_id}
-              </text>
+              <g color={b.kind === 'done' || b.kind === 'active' ? '#0a100c' : '#e6efe8'}>
+                {job && <JobTypeIcon type={job.type} size={12} x={6} y={h / 2 - 6} />}
+                <text x={21} y={h / 2 + 4} fontSize={11} fontWeight={700} fill="currentColor">{b.job_id}</text>
+              </g>
             )}
           </motion.g>
         )
@@ -95,10 +96,31 @@ export function Gantt({ run, highlight, onSelectJob }: GanttProps) {
         )
       })}
 
+      {run.log.filter((e) => e.kind === 'event').map((e) => (
+        <g key={`ev-${e.index}`}>
+          <line x1={x(e.time)} y1={TOP - 4} x2={x(e.time)} y2={height} stroke="#ff5d5d" strokeWidth={1.5} />
+          <rect x={x(e.time) - 3} y={TOP - 8} width={6} height={6} fill="#ff5d5d" transform={`rotate(45 ${x(e.time)} ${TOP - 5})`} />
+        </g>
+      ))}
+
       <motion.line y1={TOP - 6} y2={height} stroke="#7bd88f" strokeWidth={2}
         animate={{ x1: x(run.time), x2: x(run.time) }} transition={{ duration: 0.12, ease: 'linear' }} />
       <motion.text y={TOP - 8} fontSize={9} fill="#7bd88f" textAnchor="middle" fontWeight={700}
         animate={{ x: x(run.time) }} transition={{ duration: 0.12, ease: 'linear' }}>NOW</motion.text>
     </svg>
+  )
+}
+
+export function GanttLegend() {
+  const swatch = 'inline-block h-2.5 w-4 rounded-sm'
+  return (
+    <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10.5px] text-white/50">
+      <span className="flex items-center gap-1.5"><span className={swatch} style={{ background: '#c792ea' }} />done / working</span>
+      <span className="flex items-center gap-1.5"><span className={`${swatch} border border-dashed border-[#c792ea]`} style={{ background: '#c792ea33' }} />planned</span>
+      <span className="flex items-center gap-1.5"><span className={swatch} style={{ background: '#ff5d5d55', borderRight: '2px solid #ff5d5d' }} />interrupted</span>
+      <span className="flex items-center gap-1.5"><span className="inline-block h-3 border-l-2 border-dashed border-alarm" />deadline</span>
+      <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rotate-45 bg-alarm" />event</span>
+      <span className="flex items-center gap-1.5"><span className="inline-block h-3 border-l-2 border-leaf" />now</span>
+    </div>
   )
 }

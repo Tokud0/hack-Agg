@@ -55,6 +55,8 @@ class EventIn(BaseModel):
 class ScenarioIn(BaseModel):
     name: str = "scenario"
     shift_start_hour: float = 6
+    # Hours to refill at the depot; null disables refuelling.
+    refuel_hours: float | None = PField(default=0.25, ge=0)
     depot: DepotIn
     tractors: list[TractorIn] = PField(min_length=1)
     fields: list[FieldIn] = PField(min_length=1)
@@ -104,7 +106,9 @@ def to_world(scenario: ScenarioIn) -> World:
         )
         for j in scenario.jobs
     }
-    return World(time=0.0, fields=fields, jobs=jobs, tractors=tractors, depot=depot)
+    return World(
+        time=0.0, fields=fields, jobs=jobs, tractors=tractors, depot=depot, refuel_hours=scenario.refuel_hours
+    )
 
 
 def load_scenario(path: str | Path) -> ScenarioIn:

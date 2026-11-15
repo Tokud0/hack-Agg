@@ -1,5 +1,6 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useEffect, useMemo, useState } from 'react'
+import type React from 'react'
 import { api, useLiveState } from './api'
 import { FieldMap, MapLegend, type Handoff } from './components/FieldMap'
 import { FleetStrip } from './components/FleetStrip'
@@ -19,6 +20,12 @@ const FLASH_MS = 900
 const SHIFT_HOURS = 12
 
 type Tool = 'chat' | 'jobs' | 'events'
+type BaselineKind = 'baseline' | 'edf'
+
+const BASELINES: Record<BaselineKind, { label: string; subtitle: string }> = {
+  baseline: { label: 'First come, first served', subtitle: 'takes jobs in list order · no planning' },
+  edf: { label: 'Earliest deadline first', subtitle: 'takes the most urgent deadline · no planning' },
+}
 
 function useLatest(log: LogEntry[] | undefined, kind: string): LogEntry | undefined {
   return useMemo(() => [...(log ?? [])].reverse().find((e) => e.kind === kind), [log, kind])
@@ -27,7 +34,7 @@ function useLatest(log: LogEntry[] | undefined, kind: string): LogEntry | undefi
 interface MapPanelProps {
   run: RunSnapshot
   map: MapInfo
-  title: string
+  title: React.ReactNode
   subtitle: string
   accent: string
   highlight: Set<string>
@@ -50,6 +57,8 @@ function MapPanel({ run, map, title, subtitle, accent, highlight, handoffs, comp
     </section>
   )
 }
+
+const GANTT_LABEL: Record<Strategy, string> = { coordinator: 'our coordinator', baseline: 'FCFS', edf: 'EDF' }
 
 const GUIDE = [
   { n: 1, text: 'Press Run to start the shift' },
@@ -91,6 +100,7 @@ export default function App() {
   const [showGuide, setShowGuide] = useState(true)
   const [tool, setTool] = useState<Tool>('chat')
   const [ganttStrategy, setGanttStrategy] = useState<Strategy>('coordinator')
+  const [baselineKind, setBaselineKind] = useState<BaselineKind>('baseline')
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
@@ -99,7 +109,7 @@ export default function App() {
   }, [connected, view?.scenario])
 
   const coord = view?.runs.coordinator
-  const base = view?.runs.baseline
+  const base = view?.runs[baselineKind]
   const latest = useLatest(coord?.log, 'replan')
   const latestEvent = useLatest(coord?.log, 'event')
 
@@ -201,7 +211,20 @@ export default function App() {
 
       <main className="grid flex-1 grid-cols-1 gap-3 xl:grid-cols-[1fr_1fr_400px]">
         <div className="h-[600px]">
-          <MapPanel run={base} map={map} title="Baseline" subtitle="first come, first served · no re-planning" accent="#8fa396"
+          <MapPanel run={base} map={map} accent="#8fa396" subtitle={BASELINES[baselineKind].subtitle}
+            title={
+              <span className="flex items-center gap-2">
+                Baseline
+                <span className="flex rounded-md bg-black/30 p-0.5 text-[10px] normal-case tracking-normal">
+                  {(Object.keys(BASELINES) as BaselineKind[]).map((k) => (
+                    <button type="button" key={k} onClick={() => setBaselineKind(k)}
+                      className={`rounded px-1.5 py-0.5 font-semibold ${baselineKind === k ? 'bg-white/15 text-white' : 'text-white/45 hover:text-white'}`}>
+                      {k === 'baseline' ? 'FCFS' : 'EDF'}
+                    </button>
+                  ))}
+                </span>
+              </span>
+            }
             highlight={new Set()} handoffs={[]} onSelectJob={setWhyJob} />
         </div>
         <div className="h-[600px]">
@@ -243,9 +266,9 @@ export default function App() {
           <div className="mb-1 flex flex-wrap items-center justify-between gap-2">
             <h3 className="text-xs font-bold uppercase tracking-widest text-white/60">Schedule · click a block to ask "why?"</h3>
             <div className="flex gap-1 rounded-md bg-black/30 p-0.5 text-[11px]">
-              {(['coordinator', 'baseline'] as Strategy[]).map((s) => (
+              {(['coordinator', 'baseline', 'edf'] as Strategy[]).map((s) => (
                 <button type="button" key={s} onClick={() => setGanttStrategy(s)}
-                  className={`rounded px-2 py-0.5 ${ganttStrategy === s ? 'bg-white/15' : 'text-white/45'}`}>{s === 'coordinator' ? 'our coordinator' : 'baseline'}</button>
+                  className={`rounded px-2 py-0.5 ${ganttStrategy === s ? 'bg-white/15' : 'text-white/45'}`}>{GANTT_LABEL[s]}</button>
               ))}
             </div>
           </div>

@@ -7,6 +7,7 @@ const STATUS_PILL: Record<string, { label: string; cls: string }> = {
   idle: { label: 'Idle', cls: 'bg-white/10 text-white/60' },
   traveling: { label: 'Driving', cls: 'bg-sky-400/15 text-sky-300' },
   working: { label: 'Working', cls: 'bg-leaf/15 text-leaf' },
+  refueling: { label: 'Refuelling', cls: 'bg-wheat/20 text-wheat' },
   broken: { label: 'Broken down', cls: 'bg-alarm/20 text-alarm' },
 }
 
@@ -42,12 +43,13 @@ function TractorCard({ t, jobs, onBreak, onSelectJob }: { t: Tractor; jobs: Map<
             style={{ background: fuelShare < 0.2 ? '#ff5d5d' : fuelShare < 0.45 ? '#f2c46d' : '#7bd88f' }} />
         </div>
         <span className="w-14 text-right font-mono">{Math.round(t.fuel)}/{t.fuel_capacity}</span>
+        {t.refuels > 0 && <span className="rounded bg-wheat/15 px-1 text-[10px] text-wheat">{t.refuels} refuel{t.refuels > 1 ? 's' : ''}</span>}
       </div>
 
       <div className="mt-2 min-h-[34px] text-[11.5px]">
         {current ? (
           <button type="button" className="w-full text-left" onClick={() => onSelectJob(current.id)}>
-            <div className="flex justify-between"><span className="text-white/80">Now: <b>{current.id}</b> on {current.field_id}</span><span className="font-mono text-white/50">{Math.round(current.progress * 100)}%</span></div>
+            <div className="flex justify-between"><span className="text-white/80">{t.refuel_stop ? 'Refuel, then ' : 'Now: '}<b>{current.id}</b> on {current.field_id}</span><span className="font-mono text-white/50">{Math.round(current.progress * 100)}%</span></div>
             <div className="mt-1 h-1 overflow-hidden rounded-full bg-white/10">
               <motion.div className="h-full rounded-full" style={{ background: color }} animate={{ width: `${current.progress * 100}%` }} />
             </div>

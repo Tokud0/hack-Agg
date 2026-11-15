@@ -41,24 +41,55 @@ def test_blocked_road_forces_longer_detour(world):
 def test_queue_rejects_wrong_implement(world):
     network = build_network(world)
     mower = world.tractors["T2"]
-    ev = evaluate_queue(mower, StartContext("D", 0, mower.fuel), ("J01",), world.jobs, network)
+    ev = evaluate_queue(mower, StartContext("D", 0, mower.fuel), ("J01",), world, network)
     assert not ev.ok and "sprayer" in ev.reason
 
 
-def test_queue_rejects_when_fuel_runs_out(world):
+def _no_deadlines(world):
+    return replace(world, jobs={jid: replace(job, deadline=99) for jid, job in world.jobs.items()})
+
+
+def test_queue_rejects_when_fuel_runs_out_without_refuelling(world):
     network = build_network(world)
     t3 = world.tractors["T3"]
-    no_deadlines = {jid: replace(job, deadline=99) for jid, job in world.jobs.items()}
     sprays = tuple(j for j, job in world.jobs.items() if job.type == "spray")
-    ev = evaluate_queue(t3, StartContext("D", 0, t3.fuel), sprays, no_deadlines, network)
+    no_refuel = replace(_no_deadlines(world), refuel_hours=None)
+    ev = evaluate_queue(t3, StartContext("D", 0, t3.fuel), sprays, no_refuel, network)
     assert not ev.ok and "fuel" in ev.reason
+
+
+def test_queue_inserts_depot_refuel_when_tank_runs_low(world):
+    network = build_network(world)
+    t3 = world.tractors["T3"]
+    sprays = tuple(j for j, job in world.jobs.items() if job.type == "spray")
+    ev = evaluate_queue(t3, StartContext("D", 0, t3.fuel), sprays, _no_deadlines(world), network)
+    assert ev.ok and ev.refuel_stops
+    assert ev.fuel_left >= 0
+
+
+def test_refuel_stop_costs_time(world):
+    network = build_network(world)
+    t3 = world.tractors["T3"]
+    sprays = tuple(j for j, job in world.jobs.items() if job.type == "spray")
+    relaxed = _no_deadlines(world)
+    slow = evaluate_queue(t3, StartContext("D", 0, t3.fuel), sprays, replace(relaxed, refuel_hours=1.0), network)
+    fast = evaluate_queue(t3, StartContext("D", 0, t3.fuel), sprays, replace(relaxed, refuel_hours=0.1), network)
+    assert slow.end_time > fast.end_time
+
+
+def test_job_larger_than_full_tank_is_rejected(world):
+    network = build_network(world)
+    t3 = world.tractors["T3"]
+    huge = replace(world, jobs={**world.jobs, "J01": replace(world.jobs["J01"], remaining_hours=20, deadline=99)})
+    ev = evaluate_queue(t3, StartContext("D", 0, t3.fuel), ("J01",), huge, network)
+    assert not ev.ok and "full tank" in ev.reason
 
 
 def test_queue_rejects_missed_deadline(world):
     network = build_network(world)
     t1 = world.tractors["T1"]
     late = StartContext("D", 10.0, t1.fuel)
-    ev = evaluate_queue(t1, late, ("J02",), world.jobs, network)
+    ev = evaluate_queue(t1, late, ("J02",), world, network)
     assert not ev.ok and "deadline" in ev.reason
 
 
@@ -174,3 +205,21 @@ def test_scenario_rejects_unknown_field():
                 "jobs": [{"id": "J1", "type": "spray", "field_id": "F9", "priority": 1, "deadline": 5, "work_hours": 1}],
             }
         )
+
+
+def test_simulated_refuel_matches_plan(world):
+    """A tractor that must refuel follows the planned depot stop and still meets the deadline."""
+    from fleet.engine import tick
+
+    low = replace(world, tractors={**world.tractors, "T3": replace(world.tractors["T3"], fuel=10)})
+    scenario_run = start(load_scenario(SCENARIO_PATH), "coordinator", with_demo_events=False)
+    run = replace(scenario_run, world=replace(low, time=0.0))
+    run = replan_run = apply_event(run, EventIn(at=0, type="change_priority", job_id="J02", priority=1))
+    assert replan_run.world.tractors["T3"].queue or replan_run.world.tractors["T3"].current_job
+    for _ in range(400):
+        run = tick(run)
+    t3 = run.world.tractors["T3"]
+    assert t3.refuels >= 1 and t3.fuel >= -1e-6
+    for job in run.world.jobs.values():
+        if job.status == JobStatus.DONE:
+            assert job.completed_at <= job.deadline + 1e-6

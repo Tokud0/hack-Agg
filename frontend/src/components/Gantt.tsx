@@ -56,7 +56,22 @@ export function Gantt({ run, highlight, onSelectJob }: GanttProps) {
         )
       })}
 
-      {run.gantt.map((b) => {
+      {run.gantt.filter((b) => b.kind === 'refuel').map((b) => {
+        const lane = laneIndex.get(b.tractor_id) ?? 0
+        const w = Math.max(5, x(b.end) - x(b.start))
+        const h = LANE_H - BLOCK_PAD * 2 - 12
+        return (
+          <motion.g key={`refuel-${b.tractor_id}-${b.start.toFixed(2)}`} initial={{ opacity: 0 }}
+            animate={{ opacity: 1, x: x(b.start), y: TOP + lane * LANE_H + BLOCK_PAD + 6 }}
+            transition={{ type: 'spring', stiffness: 120, damping: 18 }}>
+            <title>Refuel at depot</title>
+            <rect width={w} height={h} rx={3} fill="#f2c46d" opacity={0.85} />
+            {w > 22 && <text x={w / 2} y={h / 2 + 3.5} fontSize={9} fontWeight={800} fill="#0a100c" textAnchor="middle">FUEL</text>}
+          </motion.g>
+        )
+      })}
+
+      {run.gantt.filter((b) => b.kind !== 'refuel').map((b) => {
         const lane = laneIndex.get(b.tractor_id) ?? 0
         const job = jobs.get(b.job_id)
         const color = tractorColor(b.tractor_id)
@@ -119,6 +134,7 @@ export function GanttLegend() {
       <span className="flex items-center gap-1.5"><span className={`${swatch} border border-dashed border-[#c792ea]`} style={{ background: '#c792ea33' }} />planned</span>
       <span className="flex items-center gap-1.5"><span className={swatch} style={{ background: '#ff5d5d55', borderRight: '2px solid #ff5d5d' }} />interrupted</span>
       <span className="flex items-center gap-1.5"><span className="inline-block h-3 border-l-2 border-dashed border-alarm" />deadline</span>
+      <span className="flex items-center gap-1.5"><span className="inline-block h-2.5 w-3 rounded-sm bg-wheat" />refuel stop</span>
       <span className="flex items-center gap-1.5"><span className="inline-block h-2 w-2 rotate-45 bg-alarm" />event</span>
       <span className="flex items-center gap-1.5"><span className="inline-block h-3 border-l-2 border-leaf" />now</span>
     </div>

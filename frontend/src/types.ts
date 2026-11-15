@@ -1,6 +1,6 @@
-export type TractorStatus = 'idle' | 'traveling' | 'working' | 'broken'
+export type TractorStatus = 'idle' | 'traveling' | 'working' | 'refueling' | 'broken'
 export type JobStatus = 'pending' | 'assigned' | 'in_progress' | 'done' | 'unassignable'
-export type Strategy = 'baseline' | 'coordinator'
+export type Strategy = 'baseline' | 'edf' | 'coordinator'
 
 export interface Tractor {
   id: string
@@ -14,6 +14,8 @@ export interface Tractor {
   current_job: string | null
   queue: string[]
   path: string[]
+  refuels: number
+  refuel_stop: boolean
 }
 
 export interface Job {
@@ -35,13 +37,15 @@ export interface GanttBlock {
   job_id: string
   start: number
   end: number
-  kind: 'done' | 'interrupted' | 'active' | 'planned'
+  kind: 'done' | 'interrupted' | 'active' | 'planned' | 'refuel'
 }
 
 export interface Metrics {
   jobs_total: number
   jobs_completed: number
   priority1_completed: number
+  priority_score: number
+  refuel_stops: number
   travel_hours: number
   idle_hours: number
   unassignable: number

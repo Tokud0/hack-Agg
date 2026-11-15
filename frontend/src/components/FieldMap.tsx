@@ -108,6 +108,14 @@ function TractorMarker({ t, onHover }: { t: Tractor; onHover: (id: string | null
         strokeDasharray={`${RING_LEN * fuelShare} ${RING_LEN}`} transform="rotate(-90)" strokeLinecap="round" />
       <circle r={TRACTOR_R} fill={color} stroke="#0a100c" strokeWidth={0.06} />
       <text y={0.11} fontSize={0.3} textAnchor="middle" fontWeight={800} fill="#0a100c">{t.id}</text>
+      {t.status === 'refueling' && (
+        <g transform="translate(0,-0.86)">
+          <motion.circle r={0.62} cy={0.86} fill="none" stroke="#f2c46d" strokeWidth={0.06}
+            animate={{ opacity: [0.2, 1, 0.2] }} transition={{ repeat: Infinity, duration: 1 }} />
+          <rect x={-0.13} y={-0.18} width={0.2} height={0.3} rx={0.03} fill="#f2c46d" stroke="#0a100c" strokeWidth={0.025} />
+          <path d="M0.07,-0.1 h0.06 v0.16 a0.04,0.04 0 0 0 0.08,0 v-0.12" fill="none" stroke="#f2c46d" strokeWidth={0.03} />
+        </g>
+      )}
       {t.status === 'broken' && (
         <g transform="translate(0,-0.82)">
           <path d="M0,-0.24 L0.24,0.18 L-0.24,0.18 Z" fill="#ff5d5d" stroke="#0a100c" strokeWidth={0.03} />
@@ -130,7 +138,8 @@ function TractorTooltip({ t, run }: { t: Tractor; run: RunSnapshot }) {
         <span className="font-bold" style={{ color: tractorColor(t.id) }}>{t.id} · {t.implement}</span>
         <span className={t.status === 'broken' ? 'text-alarm' : 'text-white/60'}>{t.status}</span>
       </div>
-      <div className="mt-1 text-white/70">Fuel {Math.round(t.fuel)} / {t.fuel_capacity}</div>
+      <div className="mt-1 text-white/70">Fuel {Math.round(t.fuel)} / {t.fuel_capacity}{t.refuels ? ` · ${t.refuels} refuel${t.refuels > 1 ? 's' : ''}` : ''}</div>
+      {t.refuel_stop && <div className="text-wheat">Refuelling at the depot first</div>}
       <div className="text-white/70">{job ? `Now: ${job.id} on ${job.field_id} (${Math.round(job.progress * 100)}%)` : 'No current job'}</div>
       <div className="text-white/50">Next: {t.queue.length ? t.queue.join(' → ') : '—'}</div>
       {job && <div className="text-white/40">Due {clock(job.deadline)}</div>}
@@ -249,6 +258,7 @@ export function MapLegend() {
       <span className={item}><span className="h-2.5 w-3.5 rounded-sm" style={{ background: 'repeating-linear-gradient(35deg,#7bd88f 0 3px,#2f6b3f 3px 6px)' }} />work done</span>
       <span className={item}><span className="h-2.5 w-3.5 rounded-sm border border-dashed border-alarm" />no tractor can do it</span>
       <span className={item}><span className="h-2.5 w-2.5 rounded-full bg-alarm" />broken down</span>
+      <span className={item}><span className="h-2.5 w-2.5 rounded-sm bg-wheat" />refuelling at depot</span>
     </div>
   )
 }

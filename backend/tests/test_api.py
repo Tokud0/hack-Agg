@@ -13,9 +13,9 @@ def client(monkeypatch):
         yield c
 
 
-def test_state_has_both_runs_and_initial_plan(client):
+def test_state_has_all_runs_and_initial_plan(client):
     body = client.get("/api/state").json()
-    assert set(body["runs"]) == {"baseline", "coordinator"}
+    assert set(body["runs"]) == {"baseline", "edf", "coordinator"}
     coord = body["runs"]["coordinator"]
     assert any(e["kind"] == "replan" for e in coord["log"])
     assert any(b["kind"] == "planned" for b in coord["gantt"])

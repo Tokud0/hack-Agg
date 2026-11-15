@@ -32,6 +32,7 @@ class TractorStatus(str, Enum):
     IDLE = "idle"
     TRAVELING = "traveling"
     WORKING = "working"
+    REFUELING = "refueling"
     BROKEN = "broken"
 
 
@@ -90,6 +91,13 @@ class Tractor:
     travel_time: float = 0.0
     idle_time: float = 0.0
     work_time: float = 0.0
+    # Current job needs a depot refuel first (set until the tank is full again).
+    refuel_stop: bool = False
+    refuel_left: float = 0.0
+    refuels: int = 0
+    # Closed refuel stops as (start, end), for the schedule view.
+    refuel_segments: tuple[tuple[float, float], ...] = ()
+    refuel_started_at: float | None = None
 
 
 @dataclass(frozen=True)
@@ -109,6 +117,8 @@ class World:
     tractors: dict[str, Tractor]
     depot: Field
     blocked_roads: frozenset[frozenset[str]] = frozenset()
+    # Hours to fill a tank at the depot; None disables refuelling.
+    refuel_hours: float | None = 0.25
 
     def node_position(self, node: str) -> tuple[float, float]:
         if node == self.depot.id:

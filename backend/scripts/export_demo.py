@@ -21,7 +21,7 @@ def main() -> None:
     RESULTS.mkdir(exist_ok=True)
     scenario = load_scenario(ROOT / "backend" / "scenario.json")
     demo = {}
-    for strategy in ("baseline", "coordinator"):
+    for strategy in ("baseline", "edf", "coordinator"):
         run = run_to_end(start(scenario, strategy))
         log = log_as_dicts(run)
         for entry in log:
@@ -32,13 +32,17 @@ def main() -> None:
 
     bench = run_benchmark(50)
     (RESULTS / "benchmark.json").write_text(json.dumps(bench, indent=2))
-    lines = ["| metric (mean of 50) | coordinator | baseline |", "|---|---|---|"]
-    for key in ("jobs_completed", "priority1_completed", "travel_hours", "idle_hours", "invariant_violations"):
-        lines.append(f"| {key} | {bench['summary']['coordinator'][key]} | {bench['summary']['baseline'][key]} |")
-    lines.append(f"\nWins {bench['wins']} · ties {bench['ties']} · losses {bench['losses']} (jobs completed on time)")
-    lines.append("\nDemo scenario:\n\n| metric | coordinator | baseline |\n|---|---|---|")
-    for key in ("jobs_completed", "priority1_completed", "travel_hours", "idle_hours", "invariant_violations"):
-        lines.append(f"| {key} | {demo['coordinator']['metrics'][key]} | {demo['baseline']['metrics'][key]} |")
+    keys = ("jobs_completed", "priority1_completed", "priority_score", "travel_hours", "idle_hours", "refuel_stops", "invariant_violations")
+    s = bench["summary"]
+    lines = ["| metric (mean of 50) | coordinator | EDF | FCFS |", "|---|---|---|---|"]
+    lines += [f"| {k} | {s['coordinator'].get(k, '')} | {s['edf'].get(k, '')} | {s['baseline'].get(k, '')} |" for k in keys]
+    for label, v in (("vs FCFS", bench), ("vs EDF", bench["vs_edf"]), ("vs EDF, priority-weighted", bench["vs_edf_priority"])):
+        lines.append(f"\n{label}: wins {v['wins']} · ties {v['ties']} · losses {v['losses']}")
+    lines.append("\nDemo scenario (T1 breaks down at 08:00):\n\n| metric | coordinator | EDF | FCFS |\n|---|---|---|---|")
+    lines += [
+        f"| {k} | {demo['coordinator']['metrics'][k]} | {demo['edf']['metrics'][k]} | {demo['baseline']['metrics'][k]} |"
+        for k in keys
+    ]
     (RESULTS / "comparison.md").write_text("\n".join(lines) + "\n")
 
 

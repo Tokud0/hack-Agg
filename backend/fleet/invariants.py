@@ -50,7 +50,7 @@ def check_plan(world: World, plan: Plan, network: RoadNetwork) -> InvariantRepor
             if queue:
                 violations.append(f"hard_constraints: broken {tid} still has jobs {list(queue)}")
             continue
-        ev = evaluate_queue(tractor, start_context(tractor, world, network), queue, world.jobs, network)
+        ev = evaluate_queue(tractor, start_context(tractor, world, network), queue, world, network)
         if not ev.ok:
             violations.append(f"hard_constraints: {tid}: {ev.reason}")
 

@@ -1,7 +1,7 @@
 import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
-import { api, type BenchmarkResult } from '../api'
+import { api, type BenchmarkResult, type Versus } from '../api'
 import type { WhyFacts } from '../types'
 import { tractorColor } from '../theme'
 import { CloseIcon } from './Icons'
@@ -96,8 +96,8 @@ export function WhyDrawer({ jobId, onClose }: { jobId: string; onClose: () => vo
 
 const BENCH_ROWS: { key: string; label: string }[] = [
   { key: 'jobs_completed', label: 'Jobs on time' },
-  { key: 'priority1_completed', label: 'P1 jobs' },
-  { key: 'travel_hours', label: 'Travel h' },
+  { key: 'priority1_completed', label: 'Urgent (P1) jobs' },
+  { key: 'travel_hours', label: 'Driving h' },
   { key: 'idle_hours', label: 'Idle h' },
 ]
 
@@ -108,27 +108,36 @@ export function BenchmarkModal({ onClose }: { onClose: () => void }) {
     api.benchmark().then(setData).catch((e: unknown) => setError(e instanceof Error ? e.message : 'failed'))
   }, [])
 
-  const chart = data ? BENCH_ROWS.map((r) => ({ name: r.label, Coordinator: data.summary.coordinator[r.key], Baseline: data.summary.baseline[r.key] })) : []
-  const gain = data ? ((data.summary.coordinator.jobs_completed / data.summary.baseline.jobs_completed - 1) * 100).toFixed(0) : '0'
+  const chart = data
+    ? BENCH_ROWS.map((r) => ({
+        name: r.label,
+        Coordinator: data.summary.coordinator[r.key],
+        EDF: data.summary.edf[r.key],
+        FCFS: data.summary.baseline[r.key],
+      }))
+    : []
+  const pct = (a: number, b: number) => `+${((a / b - 1) * 100).toFixed(0)}%`
+  const s = data?.summary
 
   return (
     <Backdrop onClose={onClose}>
       <div className="flex items-start justify-between">
         <div>
           <div className="text-xs uppercase tracking-widest text-white/50">Benchmark · {data?.n ?? 50} random scenarios · same breakdowns</div>
-          <h2 className="text-2xl font-extrabold">Coordinator vs first-come-first-served</h2>
+          <h2 className="text-2xl font-extrabold">Our coordinator vs two greedy dispatchers</h2>
         </div>
         <button type="button" onClick={onClose} aria-label="Close" className="rounded-lg bg-white/10 p-1.5 hover:bg-white/20"><CloseIcon size={16} /></button>
       </div>
       {error && <div className="mt-4 text-alarm">{error}</div>}
       {!data && !error && <div className="blink mt-6 text-white/50">● running 100 simulations…</div>}
-      {data && (
+      {data && s && (
         <>
-          <div className="mt-5 grid grid-cols-3 gap-3">
+          <div className="mt-5 grid grid-cols-2 gap-3 md:grid-cols-4">
             {[
-              { big: `+${gain}%`, small: 'more jobs finished on time', color: 'text-leaf' },
-              { big: `${data.wins}/${data.n}`, small: `wins · ${data.ties} ties · ${data.losses} losses`, color: 'text-wheat' },
-              { big: String(data.summary.coordinator.invariant_violations_total ?? 0), small: 'constraint violations', color: 'text-leaf' },
+              { big: pct(s.coordinator.jobs_completed, s.baseline.jobs_completed), small: 'more jobs done than first-come-first-served', color: 'text-leaf' },
+              { big: pct(s.coordinator.jobs_completed, s.edf.jobs_completed), small: 'more jobs done than earliest-deadline-first', color: 'text-leaf' },
+              { big: pct(s.coordinator.priority1_completed, s.edf.priority1_completed), small: 'more urgent (P1) jobs than EDF', color: 'text-wheat' },
+              { big: String(s.coordinator.invariant_violations_total ?? 0), small: 'constraint violations in all runs', color: 'text-leaf' },
             ].map((c, i) => (
               <motion.div key={c.small} className="rounded-xl bg-black/30 p-4" initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.15 }}>
                 <div className={`font-mono text-4xl font-extrabold ${c.color}`}>{c.big}</div>
@@ -144,11 +153,24 @@ export function BenchmarkModal({ onClose }: { onClose: () => void }) {
                 <Tooltip contentStyle={{ background: '#16211a', border: '1px solid #2c3d32', borderRadius: 8 }} cursor={{ fill: '#ffffff08' }} />
                 <Legend />
                 <Bar dataKey="Coordinator" fill="#7bd88f" radius={[6, 6, 0, 0]} />
-                <Bar dataKey="Baseline" fill="#5b6b61" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="EDF" fill="#5cc8ff" radius={[6, 6, 0, 0]} />
+                <Bar dataKey="FCFS" fill="#5b6b61" radius={[6, 6, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </div>
-          <p className="mt-2 text-xs text-white/40">Means per scenario. Higher is better for jobs; lower is better for travel and idle time.</p>
+          <div className="mt-3 grid grid-cols-1 gap-2 text-[12.5px] md:grid-cols-3">
+            {[
+              { label: 'vs FCFS (jobs done)', v: data as Versus },
+              { label: 'vs EDF (jobs done)', v: data.vs_edf },
+              { label: 'vs EDF (priority-weighted)', v: data.vs_edf_priority },
+            ].map(({ label, v }) => (
+              <div key={label} className="rounded-lg bg-black/25 px-3 py-2">
+                <div className="text-white/50">{label}</div>
+                <div className="font-mono"><b className="text-leaf">{v.wins} wins</b> · {v.ties} ties · <span className="text-alarm/80">{v.losses} losses</span></div>
+              </div>
+            ))}
+          </div>
+          <p className="mt-2 text-xs text-white/40">Means per scenario. Higher is better for jobs; lower is better for driving and idle time. Losses come from unforeseen breakdowns hitting a plan that was optimal before the breakdown.</p>
         </>
       )}
     </Backdrop>

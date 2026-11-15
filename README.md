@@ -45,17 +45,20 @@ cd backend
 
 ## Results
 
-Coordinator vs first-come-first-served baseline over 50 random scenarios, with the same breakdowns for both (`results/comparison.md`):
+Our coordinator against two greedy dispatchers that never plan ahead: **FCFS** (first come, first served) and **EDF** (earliest deadline first). All three run the same 50 random scenarios with the same breakdowns (`results/comparison.md`):
 
-| metric (mean) | coordinator | baseline |
-|---|---|---|
-| jobs completed on time | **6.32** | 4.84 |
-| priority-1 jobs completed | **2.6** | 1.72 |
-| travel hours | **6.59** | 7.19 |
-| idle hours | **3.26** | 3.52 |
-| constraint violations | **0** | 0 |
+| metric (mean of 50) | coordinator | EDF | FCFS |
+|---|---|---|---|
+| jobs completed on time | **6.36** | 5.88 | 4.80 |
+| urgent (P1) jobs completed | **2.54** | 1.96 | 1.70 |
+| priority-weighted output | **16.1** | 13.7 | 11.3 |
+| driving hours | **6.49** | 7.41 | 7.13 |
+| idle hours | **0.10** | 0.37 | 0.40 |
+| constraint violations | **0** | 0 | 0 |
 
-The coordinator wins 42 scenarios, ties 8 and loses 0.
+By jobs completed, the coordinator wins 44, ties 5 and loses 1 against FCFS; against EDF it wins 26, ties 17 and loses 7. On priority-weighted output it wins 40, ties 4 and loses 6 against EDF. Without breakdowns it never loses to EDF on priority-weighted output. The remaining losses happen when a breakdown hits a plan that was optimal before the breakdown.
+
+Demo scenario, with T1 breaking down at 08:00: the coordinator completes 8 jobs, 3 of them urgent, with one refuel stop. EDF completes 7 (2 urgent) and FCFS 7 (1 urgent).
 
 ## Deliverables
 
@@ -69,13 +72,15 @@ The coordinator wins 42 scenarios, ties 8 and loses 0.
 
 1. **Filter** (`feasibility.py`): a tractor's whole queue is simulated in order. Each job needs the right implement, enough fuel for travel plus work, and must finish before its deadline. Inserting a job early can break a later one, so the whole queue is checked every time.
 2. **Score and assign** (`coordinator.py`): jobs are sorted by priority, then deadline. Each one goes into the cheapest feasible slot across all queues. The objective is lexicographic: priority-weighted completed work first, then travel, then completion time.
-3. **Improve**: deterministic local search (relocate, swap, insert-unassigned, eject-and-insert) with a fixed iteration cap, so the same input always gives the same plan.
+3. **Improve**: multi-start. Several starting plans (by priority, by deadline, by slack, an EDF schedule, and fixed-seed shuffles) are each improved by local search (relocate, swap, insert-unassigned, eject-and-insert) with a fixed iteration cap, and the best one wins. The search is deterministic.
 4. **Re-plan on an event** (`replan.py`): completed work is frozen, jobs currently in progress on healthy tractors stay pinned, the finished share of an interrupted job is kept, and everything else is planned again.
 5. **Verify** (`invariants.py`): each job has at most one tractor; completed work is never reassigned; every queue satisfies implement, fuel and deadline; every unfinished job is either planned or marked unassignable with a reason.
 
-**Baseline rule** (`baseline.py`): whenever a tractor is free, it takes the first pending job in submission order that it can feasibly do right now. No lookahead, no priorities. Work released by a breakdown goes back to the pool with its progress kept.
+**Baseline rules** (`baseline.py`): whenever a tractor is free, it takes the first pending job it can feasibly do right now, either in submission order (FCFS) or by earliest deadline (EDF). There is no lookahead. Work released by a breakdown goes back to the pool with its progress kept.
 
-**Metric definitions**: *completed* means done before the deadline. *Idle* is time a healthy tractor sits without work while unfinished, assignable work still exists. Fuel cannot be refilled during a shift.
+**Metric definitions**: *completed* means done before the deadline. *Idle* is time a healthy tractor sits without work while unfinished, assignable work for its implement is still waiting.
+
+**Fuel and refuelling** (`feasibility.plan_leg`, shared by the planner and the simulator): a tractor always keeps enough fuel to drive back to the depot. That reserve is what lets it take over work after a breakdown. When a job plus the way home does not fit in the tank, the tractor first refuels at the depot (`refuel_hours`, 15 min in the demo). Refuel stops count against deadlines.
 
 ## LLM (`backend/llm/`)
 

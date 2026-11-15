@@ -6,6 +6,7 @@ from dataclasses import asdict, dataclass, field, replace
 from typing import Literal
 
 from . import baseline
+from .coordinator import PRIORITY_WEIGHT
 from .diff import diff_plans
 from .models import Job, JobStatus, World
 from .replan import block_road, break_tractor, change_priority, replan
@@ -13,7 +14,8 @@ from .routing import RoadNetwork, build_network
 from .scenario import EventIn, ScenarioIn, to_world
 from .simulator import DEFAULT_DT, is_finished, step
 
-Strategy = Literal["coordinator", "baseline"]
+Strategy = Literal["coordinator", "baseline", "edf"]
+BASELINE_RULES: dict[str, baseline.Rule] = {"baseline": "fcfs", "edf": "edf"}
 MAX_HORIZON_HOURS = 24.0
 
 
@@ -110,28 +112,45 @@ def tick(run: Run, dt: float = DEFAULT_DT) -> Run:
         event, rest = run.pending_events[0], run.pending_events[1:]
         run = apply_event(replace(run, pending_events=rest), event)
 
-    world = baseline.dispatch(run.world, run.network) if run.strategy == "baseline" else run.world
+    rule = BASELINE_RULES.get(run.strategy)
+    world = baseline.dispatch(run.world, run.network, rule) if rule else run.world
     world, events = step(world, run.network, dt)
-    entries = tuple(
-        LogEntry(round(e.time, 2), e.kind, f"{e.tractor_id} {'started' if e.kind == 'job_started' else 'finished'} {e.job_id}")
-        for e in events
-    )
+    entries = tuple(LogEntry(round(e.time, 2), e.kind, _sim_message(e.kind, e.tractor_id, e.job_id)) for e in events)
     return _with_log(replace(run, world=world), *entries)
+
+
+SIM_MESSAGES = {
+    "job_started": "{t} started {j}",
+    "job_done": "{t} finished {j}",
+    "refuel_started": "{t} refuelling at the depot before {j}",
+    "refueled": "{t} refuelled, heading to {j}",
+}
+
+
+def _sim_message(kind: str, tractor_id: str, job_id: str | None) -> str:
+    return SIM_MESSAGES.get(kind, "{t} {j}").format(t=tractor_id, j=job_id)
 
 
 def finished(run: Run) -> bool:
     if run.pending_events:
         return False
-    if run.strategy == "baseline":
-        dispatched = baseline.dispatch(run.world, run.network)
+    rule = BASELINE_RULES.get(run.strategy)
+    if rule:
+        dispatched = baseline.dispatch(run.world, run.network, rule)
         return is_finished(dispatched) and not any(t.queue for t in dispatched.tractors.values())
     return is_finished(run.world)
+
+
+def finalize(run: Run) -> Run:
+    """Persist the baselines' last dispatch, so leftover jobs get their final status."""
+    rule = BASELINE_RULES.get(run.strategy)
+    return replace(run, world=baseline.dispatch(run.world, run.network, rule)) if rule else run
 
 
 def run_to_end(run: Run, dt: float = DEFAULT_DT) -> Run:
     while not finished(run) and run.world.time < MAX_HORIZON_HOURS:
         run = tick(run, dt)
-    return run
+    return finalize(run)
 
 
 def metrics(run: Run) -> dict:
@@ -141,6 +160,8 @@ def metrics(run: Run) -> dict:
         "jobs_total": len(run.world.jobs),
         "jobs_completed": len(on_time),
         "priority1_completed": sum(1 for j in on_time if j.priority == 1),
+        "priority_score": sum(PRIORITY_WEIGHT[j.priority] for j in on_time),
+        "refuel_stops": sum(t.refuels for t in run.world.tractors.values()),
         "travel_hours": round(sum(t.travel_time for t in run.world.tractors.values()), 2),
         "idle_hours": round(sum(t.idle_time for t in run.world.tractors.values()), 2),
         "unassignable": sum(1 for j in jobs if j.status == JobStatus.UNASSIGNABLE),

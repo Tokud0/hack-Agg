@@ -43,12 +43,17 @@ export const api = {
   benchmark: () => request<BenchmarkResult>('/api/benchmark'),
 }
 
-export interface BenchmarkResult {
-  n: number
+export interface Versus {
   wins: number
   ties: number
   losses: number
-  summary: Record<'coordinator' | 'baseline', Record<string, number>>
+}
+
+export interface BenchmarkResult extends Versus {
+  n: number
+  vs_edf: Versus
+  vs_edf_priority: Versus
+  summary: Record<'coordinator' | 'baseline' | 'edf', Record<string, number>>
 }
 
 /** Live session state streamed over WebSocket, auto-reconnecting. */

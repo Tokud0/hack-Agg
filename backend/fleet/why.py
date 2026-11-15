@@ -31,11 +31,11 @@ def _alternatives(world: World, network: RoadNetwork, job_id: str, owner: str | 
         only_this = {**{k: () for k in queues}, tid: queues[tid]}
         best = best_insertion(inp, only_this, job_id)
         if best is None:
-            alone = evaluate_queue(tractor, inp.starts[tid], (job_id,), world.jobs, network)
+            alone = evaluate_queue(tractor, inp.starts[tid], (job_id,), world, network)
             if not alone.ok:
                 reason = alone.reason or "no feasible slot"
             else:
-                queued = evaluate_queue(tractor, inp.starts[tid], queues[tid] + (job_id,), world.jobs, network)
+                queued = evaluate_queue(tractor, inp.starts[tid], queues[tid] + (job_id,), world, network)
                 reason = f"fully booked with higher-value work ({queued.reason})"
             result.append({"tractor_id": tid, "feasible": False, "reason": reason})
         else:
@@ -68,8 +68,8 @@ def explain_assignment(world: World, network: RoadNetwork, job_id: str) -> dict:
     queue = tractor.queue
     if job_id in queue:
         idx = queue.index(job_id)
-        before = evaluate_queue(tractor, start, queue[:idx], world.jobs, network)
-        through = evaluate_queue(tractor, start, queue[: idx + 1], world.jobs, network)
+        before = evaluate_queue(tractor, start, queue[:idx], world, network)
+        through = evaluate_queue(tractor, start, queue[: idx + 1], world, network)
         prev_node = world.jobs[queue[idx - 1]].field_id if idx else start.node
         finish = through.finish_times.get(job_id, 0.0)
         fuel_before, fuel_after = before.fuel_left, through.fuel_left

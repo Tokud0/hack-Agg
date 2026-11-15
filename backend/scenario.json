@@ -1,36 +1,171 @@
 {
   "name": "Demo: spring spraying, 3 tractors",
   "shift_start_hour": 6,
-  "grid": { "width": 10, "height": 10 },
-  "depot": { "id": "D", "x": 5, "y": 0 },
+  "refuel_hours": 0.25,
+  "grid": {
+    "width": 10,
+    "height": 10
+  },
+  "depot": {
+    "id": "D",
+    "x": 5,
+    "y": 0
+  },
   "tractors": [
-    { "id": "T1", "implement": "sprayer", "fuel_capacity": 100, "speed": 4, "fuel_per_travel_hour": 5, "fuel_per_work_hour": 8 },
-    { "id": "T2", "implement": "mower", "fuel_capacity": 100, "speed": 4, "fuel_per_travel_hour": 5, "fuel_per_work_hour": 8 },
-    { "id": "T3", "implement": "sprayer", "fuel_capacity": 60, "speed": 4, "fuel_per_travel_hour": 5, "fuel_per_work_hour": 8 }
+    {
+      "id": "T1",
+      "implement": "sprayer",
+      "fuel_capacity": 100,
+      "speed": 4,
+      "fuel_per_travel_hour": 5,
+      "fuel_per_work_hour": 8
+    },
+    {
+      "id": "T2",
+      "implement": "mower",
+      "fuel_capacity": 100,
+      "speed": 4,
+      "fuel_per_travel_hour": 5,
+      "fuel_per_work_hour": 8
+    },
+    {
+      "id": "T3",
+      "implement": "sprayer",
+      "fuel_capacity": 60,
+      "speed": 4,
+      "fuel_per_travel_hour": 5,
+      "fuel_per_work_hour": 8
+    }
   ],
   "fields": [
-    { "id": "F1", "x": 2, "y": 2 },
-    { "id": "F2", "x": 7, "y": 2 },
-    { "id": "F3", "x": 1, "y": 6 },
-    { "id": "F4", "x": 5, "y": 5 },
-    { "id": "F5", "x": 9, "y": 6 },
-    { "id": "F6", "x": 3, "y": 9 },
-    { "id": "F7", "x": 7, "y": 9 },
-    { "id": "F8", "x": 9, "y": 1 }
+    {
+      "id": "F1",
+      "x": 2,
+      "y": 2
+    },
+    {
+      "id": "F2",
+      "x": 7,
+      "y": 2
+    },
+    {
+      "id": "F3",
+      "x": 1,
+      "y": 6
+    },
+    {
+      "id": "F4",
+      "x": 5,
+      "y": 5
+    },
+    {
+      "id": "F5",
+      "x": 9,
+      "y": 6
+    },
+    {
+      "id": "F6",
+      "x": 3,
+      "y": 9
+    },
+    {
+      "id": "F7",
+      "x": 7,
+      "y": 9
+    },
+    {
+      "id": "F8",
+      "x": 9,
+      "y": 1
+    }
   ],
   "jobs": [
-    { "id": "J01", "type": "spray", "field_id": "F1", "priority": 2, "deadline": 5, "work_hours": 1.5 },
-    { "id": "J02", "type": "spray", "field_id": "F2", "priority": 1, "deadline": 3, "work_hours": 1.0 },
-    { "id": "J03", "type": "spray", "field_id": "F4", "priority": 2, "deadline": 7, "work_hours": 1.5 },
-    { "id": "J04", "type": "spray", "field_id": "F5", "priority": 3, "deadline": 9, "work_hours": 2.0 },
-    { "id": "J05", "type": "spray", "field_id": "F6", "priority": 1, "deadline": 8, "work_hours": 1.5 },
-    { "id": "J06", "type": "spray", "field_id": "F7", "priority": 2, "deadline": 10, "work_hours": 1.0 },
-    { "id": "J07", "type": "spray", "field_id": "F8", "priority": 3, "deadline": 6, "work_hours": 1.0 },
-    { "id": "J08", "type": "mow", "field_id": "F3", "priority": 2, "deadline": 6, "work_hours": 2.0 },
-    { "id": "J09", "type": "mow", "field_id": "F4", "priority": 1, "deadline": 4, "work_hours": 1.5 },
-    { "id": "J10", "type": "mow", "field_id": "F7", "priority": 3, "deadline": 10, "work_hours": 2.0 }
+    {
+      "id": "J01",
+      "type": "spray",
+      "field_id": "F1",
+      "priority": 2,
+      "deadline": 8,
+      "work_hours": 1.5
+    },
+    {
+      "id": "J02",
+      "type": "spray",
+      "field_id": "F2",
+      "priority": 1,
+      "deadline": 3,
+      "work_hours": 1.0
+    },
+    {
+      "id": "J03",
+      "type": "spray",
+      "field_id": "F4",
+      "priority": 2,
+      "deadline": 10,
+      "work_hours": 1.5
+    },
+    {
+      "id": "J04",
+      "type": "spray",
+      "field_id": "F5",
+      "priority": 3,
+      "deadline": 12,
+      "work_hours": 2.0
+    },
+    {
+      "id": "J05",
+      "type": "spray",
+      "field_id": "F6",
+      "priority": 1,
+      "deadline": 11,
+      "work_hours": 1.5
+    },
+    {
+      "id": "J06",
+      "type": "spray",
+      "field_id": "F7",
+      "priority": 2,
+      "deadline": 13,
+      "work_hours": 1.0
+    },
+    {
+      "id": "J07",
+      "type": "spray",
+      "field_id": "F8",
+      "priority": 3,
+      "deadline": 9,
+      "work_hours": 1.0
+    },
+    {
+      "id": "J08",
+      "type": "mow",
+      "field_id": "F3",
+      "priority": 2,
+      "deadline": 6,
+      "work_hours": 2.0
+    },
+    {
+      "id": "J09",
+      "type": "mow",
+      "field_id": "F4",
+      "priority": 1,
+      "deadline": 4,
+      "work_hours": 1.5
+    },
+    {
+      "id": "J10",
+      "type": "mow",
+      "field_id": "F7",
+      "priority": 3,
+      "deadline": 10,
+      "work_hours": 2.0
+    }
   ],
   "demo_events": [
-    { "at": 2.0, "type": "breakdown", "tractor_id": "T1" }
+    {
+      "at": 2.0,
+      "type": "breakdown",
+      "tractor_id": "T1"
+    }
   ]
 }

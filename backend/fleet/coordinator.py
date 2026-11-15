@@ -1,11 +1,15 @@
-"""Deterministic coordinator: filter -> greedy insertion -> local search.
+"""Deterministic coordinator: filter -> multi-start construction -> local search.
 
-Pure function of the world: same input always yields the same plan.
+Several starting plans (different job orders, plus an earliest-deadline
+schedule) are each improved by local search; the best feasible plan wins.
+Shuffled starts use fixed seeds, so the same input always yields the same plan.
 Priority 1 is the most urgent.
 """
 
 from __future__ import annotations
 
+import random
+from collections.abc import Callable
 from dataclasses import dataclass
 
 from .feasibility import QueueEval, StartContext, evaluate_queue, start_context
@@ -17,6 +21,7 @@ ASSIGN_WEIGHT = 1000.0  # completing work dominates everything else
 TRAVEL_WEIGHT = 10.0
 COMPLETION_WEIGHT = 1.0  # finish earlier -> less idle risk, more slack
 DEFAULT_ITERATIONS = 50
+SHUFFLED_STARTS = 4
 
 
 @dataclass(frozen=True)
@@ -52,7 +57,7 @@ def build_input(world: World, network: RoadNetwork) -> PlanningInput:
 
 
 def _eval(inp: PlanningInput, tractor: Tractor, queue: tuple[str, ...]) -> QueueEval:
-    return evaluate_queue(tractor, inp.starts[tractor.id], queue, inp.world.jobs, inp.network)
+    return evaluate_queue(tractor, inp.starts[tractor.id], queue, inp.world, inp.network)
 
 
 def _queue_cost(inp: PlanningInput, ev: QueueEval) -> float:
@@ -112,13 +117,61 @@ def unassignable_reason(inp: PlanningInput, queues: dict[str, tuple[str, ...]], 
     return "; ".join(reasons) if reasons else "no feasible slot"
 
 
-def greedy(inp: PlanningInput) -> dict[str, tuple[str, ...]]:
-    queues: dict[str, tuple[str, ...]] = {t.id: () for t in inp.tractors}
-    for job_id in inp.pool:
+Queues = dict[str, tuple[str, ...]]
+
+
+def greedy(inp: PlanningInput, order: tuple[str, ...] | None = None) -> Queues:
+    """Cheapest feasible insertion of each job, in the given order."""
+    queues: Queues = {t.id: () for t in inp.tractors}
+    for job_id in order or inp.pool:
         best = best_insertion(inp, queues, job_id)
         if best is not None:
             queues = {**queues, best[0]: best[1]}
     return queues
+
+
+def earliest_deadline_schedule(inp: PlanningInput) -> Queues:
+    """Jobs by deadline, each appended to the tractor that can finish it soonest."""
+    jobs = inp.world.jobs
+    queues: Queues = {t.id: () for t in inp.tractors}
+    for job_id in sorted(inp.pool, key=lambda j: (jobs[j].deadline, jobs[j].priority, j)):
+        options = []
+        for t in inp.tractors:
+            ev = _eval(inp, t, queues[t.id] + (job_id,))
+            if ev.ok:
+                options.append((ev.finish_times[job_id], t.id))
+        if options:
+            _, tid = min(options)
+            queues = {**queues, tid: queues[tid] + (job_id,)}
+    return queues
+
+
+def _starting_plans(inp: PlanningInput) -> list[Callable[[], Queues]]:
+    jobs = inp.world.jobs
+    by_deadline = tuple(sorted(inp.pool, key=lambda j: (jobs[j].deadline, jobs[j].priority, j)))
+    by_slack = tuple(sorted(inp.pool, key=lambda j: (jobs[j].deadline - jobs[j].remaining_hours, j)))
+    starts: list[Callable[[], Queues]] = [
+        lambda: greedy(inp),
+        lambda: greedy(inp, by_deadline),
+        lambda: greedy(inp, by_slack),
+        lambda: earliest_deadline_schedule(inp),
+    ]
+    for seed in range(SHUFFLED_STARTS):
+        shuffled = list(inp.pool)
+        random.Random(seed).shuffle(shuffled)
+        starts.append(lambda order=tuple(shuffled): greedy(inp, order))
+    return starts
+
+
+def best_plan(inp: PlanningInput, iterations: int) -> Queues:
+    best_queues: Queues = {t.id: () for t in inp.tractors}
+    best_score = score_plan(inp, best_queues) or 0.0
+    for build in _starting_plans(inp):
+        queues = local_search(inp, build(), iterations)
+        score = score_plan(inp, queues)
+        if score is not None and score > best_score + 1e-6:
+            best_queues, best_score = queues, score
+    return best_queues
 
 
 def _neighbours(inp: PlanningInput, queues: dict[str, tuple[str, ...]]):
@@ -175,7 +228,7 @@ def local_search(
 
 def plan(world: World, network: RoadNetwork, iterations: int = DEFAULT_ITERATIONS) -> Plan:
     inp = build_input(world, network)
-    queues = local_search(inp, greedy(inp), iterations)
+    queues = best_plan(inp, iterations)
     assigned = {jid for q in queues.values() for jid in q}
     unassignable = {jid: unassignable_reason(inp, queues, jid) for jid in inp.pool if jid not in assigned}
     broken = {tid: () for tid, t in world.tractors.items() if t.status == TractorStatus.BROKEN}

@@ -19,7 +19,7 @@ from fleet.risk import at_risk
 from fleet.whatif import forecast
 from llm.assistant import explain_replan
 
-from .incident import review_incident
+from .incident import review_incident, runs_automatically
 from .serialize import snapshot, static_map
 
 logger = logging.getLogger(__name__)
@@ -141,13 +141,22 @@ class Session:
                 continue
             self._reviewing.add(i)
             try:
-                asyncio.get_running_loop().create_task(self._review(i))
+                asyncio.get_running_loop().create_task(self._review(i, runs_automatically()))
             except RuntimeError:  # no loop (tests, scripts): do it now
-                self._finish_review(i, review_incident(self, i))
+                self._finish_review(i, review_incident(self, i, runs_automatically()))
 
-    async def _review(self, index: int) -> None:
+    async def investigate(self, index: int) -> dict:
+        """Run the LLM agent on one incident now, on the operator's request, and keep its record."""
+        log = self.runs["coordinator"].log
+        if not 0 <= index < len(log) or log[index].kind != "replan" or log[index].data["diff"]["trigger"].get("type") == "initial_plan":
+            raise KeyError(f"log entry {index} is not an incident")
+        record = await asyncio.to_thread(review_incident, self, index, True)
+        self._finish_review(index, record)
+        return record
+
+    async def _review(self, index: int, use_model: bool) -> None:
         try:
-            self._finish_review(index, await asyncio.to_thread(review_incident, self, index))
+            self._finish_review(index, await asyncio.to_thread(review_incident, self, index, use_model))
         except Exception:  # the review is extra; it must never take the shift down
             logger.exception("incident review %s failed", index)
             self._reviewing.discard(index)

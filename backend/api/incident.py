@@ -10,6 +10,7 @@ record says which of the two happened.
 from __future__ import annotations
 
 import json
+import os
 from dataclasses import asdict, replace
 from typing import TYPE_CHECKING, Literal
 
@@ -191,12 +192,24 @@ def _file_from_findings(registry: dict[str, Tool], attempt: AgentRun) -> AgentRu
     return replace(attempt, calls=(*attempt.calls, filed), conclusion=filed.arguments if filed.ok else None)
 
 
-def review_incident(session: Session, replan_index: int) -> dict:
-    """Investigate one re-plan and return the record for the dashboard and the event log."""
+ON_REQUEST_NOTE = "automatic check without the LLM; the agent investigates on request"
+
+
+def runs_automatically() -> bool:
+    """Whether the LLM agent investigates every event by itself. Off by default: each investigation is
+    several model calls, and the free Groq tier allows few per minute. Set INCIDENT_AGENT_AUTO=1 to turn it on."""
+    return os.environ.get("INCIDENT_AGENT_AUTO") == "1"
+
+
+def review_incident(session: Session, replan_index: int, use_model: bool = True) -> dict:
+    """Investigate one re-plan and return the record for the dashboard and the event log.
+
+    With `use_model` off only the fixed sequence of tools runs and the review is rule-based.
+    """
     registry = build_registry(session, replan_index)
-    source = provider.provider_name() or "template"
+    source = (provider.provider_name() or "template") if use_model else "template"
     attempt = run_agent(SYSTEM, "A new incident has been handled automatically. Investigate it and file your review.", registry, FINISH_TOOL) if source == "groq" else AgentRun()
-    notes = attempt.notes
+    notes = attempt.notes if use_model else (ON_REQUEST_NOTE,)
     if attempt.conclusion is None and sum(c.ok for c in attempt.calls) >= MIN_CALLS_TO_CONCLUDE:
         attempt = _file_from_findings(registry, attempt)
     if attempt.conclusion is None:  # no model, or it did not finish: fall back, and keep what it tried for the record

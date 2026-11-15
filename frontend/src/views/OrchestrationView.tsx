@@ -82,7 +82,7 @@ export function OrchestrationView({ log, explanations, incidentReviews }: Orches
             <Conversation replanIndex={selected.index} messages={selected.data.messages ?? []} />
             <Outcome replan={selected.data} explanation={explanation} />
           </div>
-          <IncidentAgent record={incidentReviews[String(selected.index)]} isIncident={selected.data.diff?.trigger.type !== 'initial_plan'} />
+          <IncidentAgent record={incidentReviews[String(selected.index)]} isIncident={selected.data.diff?.trigger.type !== 'initial_plan'} replanIndex={selected.index} />
           <CandidateTable candidates={trace.plan.candidates} />
         </>
       ) : (

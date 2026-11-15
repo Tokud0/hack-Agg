@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import type { Scenario, Trouble } from './scenario'
-import type { ShiftBriefing } from './types'
+import type { IncidentRecord, ShiftBriefing } from './types'
 import type { FaultTestResult, JobDraft, MapInfo, ProposedEvent, SessionView, WhatIfResult, WhyFacts } from './types'
 
 const RECONNECT_MS = 1000
@@ -63,6 +63,7 @@ export const api = {
       method: 'POST',
       body: JSON.stringify({ tractor_id: tractorId, delay_hours: delayHours }),
     }),
+  investigateIncident: (replanIndex: number) => request<IncidentRecord>(`/api/incidents/${replanIndex}/investigate`, { method: 'POST' }),
   briefing: () => request<ShiftBriefing>('/api/briefing'),
   faultTest: () => request<FaultTestResult>('/api/orchestration/fault-test', { method: 'POST' }),
   benchmark: () => request<BenchmarkResult>('/api/benchmark'),

@@ -54,7 +54,7 @@ export function ReplanCard({ item, replan, messages, explanation, incident, isEx
           {hidden > 0 && <p className="mt-1 text-[11px] text-white/40">and {hidden} more</p>}
         </div>
       )}
-      {incident?.review && (
+      {incident?.review && incident.source !== 'template' && (
         <div className="mt-2">
           <div className={label}>Incident agent · {incident.calls.length} tool calls · {incident.review.severity} severity</div>
           <p className="mt-1 text-[12px] leading-snug text-white/75">{incident.review.recommendation}</p>

@@ -287,6 +287,15 @@ async def what_if(body: EventRequest) -> dict:
     return {"facts": facts, "headline": narration.headline, "answer": narration.answer, "source": source}
 
 
+@app.post("/api/incidents/{replan_index}/investigate")
+async def investigate_incident(replan_index: int) -> dict:
+    """Have the LLM agent investigate one incident with its tools. The plan is not affected."""
+    try:
+        return await session().investigate(replan_index)
+    except KeyError as exc:
+        raise HTTPException(404, str(exc.args[0])) from exc
+
+
 @app.get("/api/briefing")
 async def briefing() -> dict:
     """The shift so far in a few sentences, with the list of things that need attention."""

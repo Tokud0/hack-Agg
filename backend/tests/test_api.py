@@ -366,6 +366,7 @@ def test_every_event_gets_a_review_even_with_no_model(client):
     session, index = _incident_session()
     record = session.incident_reviews[index]
     assert record["source"] == "template" and record["review"]["severity"] in ("low", "medium", "high")
+    assert record["notes"] == ["automatic check without the LLM; the agent investigates on request"]
     assert [c["tool"] for c in record["calls"]] == ["get_incident", "evaluate_deadline_risk", "forecast_rest_of_shift", "file_incident_review"]
     assert all(c["ok"] and c["chosen_by"] == "script" for c in record["calls"])
     assert 0 not in session.incident_reviews  # the opening plan is not an incident
@@ -411,3 +412,19 @@ def test_incident_tools_never_change_the_fleet(client):
     for name in ("get_incident", "get_fleet_snapshot", "evaluate_deadline_risk", "forecast_rest_of_shift"):
         assert call_tool(registry, name, {}).ok
     assert session.runs["coordinator"].world == before
+
+
+def test_agent_does_not_call_a_model_by_itself_but_does_on_request(client, monkeypatch):
+    asked = []
+    monkeypatch.setattr(provider, "provider_name", lambda: "groq")
+    monkeypatch.setattr(provider, "chat_with_tools", lambda messages, tools: asked.append(1))
+    monkeypatch.setattr(provider, "structured", lambda *args: (None, "template"))
+    monkeypatch.delenv("INCIDENT_AGENT_AUTO", raising=False)
+    client.post("/api/scenario", json=json.loads(DEMO_SCENARIO.read_text()))
+    client.post("/api/events", json={"type": "breakdown", "tractor_id": "T1"})
+    reviews = client.get("/api/state").json()["incident_reviews"]
+    assert asked == [] and len(reviews) == 1  # the automatic check ran, the model was not touched
+    index = next(iter(reviews))
+    res = client.post(f"/api/incidents/{index}/investigate")
+    assert res.status_code == 200 and asked  # asked for: now the model is consulted
+    assert client.post("/api/incidents/0/investigate").status_code == 404

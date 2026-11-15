@@ -1,4 +1,6 @@
 import { useState } from 'react'
+import { api } from '../../api'
+import { SparkIcon } from '../Icons'
 import type { IncidentRecord, ToolCall } from '../../types'
 import { SourceBadge } from '../Panels'
 
@@ -41,18 +43,44 @@ interface IncidentAgentProps {
   record?: IncidentRecord
   /** The opening plan is not an incident, so the agent does not run for it. */
   isIncident: boolean
+  replanIndex: number
 }
 
 /** The one LLM agent that acts: after the fleet has recovered, it investigates with tool calls and files a review. */
-export function IncidentAgent({ record, isIncident }: IncidentAgentProps) {
+export function IncidentAgent({ record, isIncident, replanIndex }: IncidentAgentProps) {
+  const [isBusy, setIsBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const isByModel = record !== undefined && record.source !== 'template'
+
+  const investigate = async () => {
+    setIsBusy(true)
+    setError(null)
+    try {
+      await api.investigateIncident(replanIndex)
+    } catch (e) {
+      setError(e instanceof Error ? e.message : 'The agent could not investigate')
+    } finally {
+      setIsBusy(false)
+    }
+  }
+
   return (
     <section className="panel p-3" aria-label="Incident Response Agent">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className={heading}>Incident Response Agent · real tool calls</h2>
-        {record && <SourceBadge source={record.source} />}
+        <div className="flex items-center gap-2">
+          {record && <SourceBadge source={record.source} />}
+          {isIncident && (
+            <button type="button" onClick={investigate} disabled={isBusy}
+              className="flex items-center gap-1.5 rounded-lg bg-wheat px-3 py-1.5 text-xs font-extrabold text-black hover:brightness-110 disabled:opacity-50">
+              <SparkIcon size={13} />{isBusy ? 'Agent is calling tools…' : isByModel ? 'Investigate again' : 'Let the LLM agent investigate'}
+            </button>
+          )}
+        </div>
       </div>
+      {error && <p role="alert" className="mt-1 text-[12px] text-alarm">{error}</p>}
       <p className="mt-1 text-[11.5px] leading-snug text-white/50">
-        After the fleet has recovered by itself, an LLM agent investigates: it decides which tools to call, the server validates and runs them, and it files a review for the manager.
+        After the fleet has recovered by itself, an LLM agent can investigate the incident: it decides which tools to call, the server validates and runs them, and it files a review for the manager.
         Its tools only read; it cannot change the plan.
       </p>
       {!isIncident && <p className="mt-2 text-[12.5px] text-white/45">This is the opening plan, not an incident. Pick a re-plan caused by an event to see the agent at work.</p>}
@@ -71,7 +99,8 @@ export function IncidentAgent({ record, isIncident }: IncidentAgentProps) {
           )}
           {record.source === 'template' && (
             <p className="mt-2 text-[11.5px] leading-snug text-wheat/90">
-              No model finished this review{record.notes.length ? ` (${record.notes.join('; ')})` : ''}, so the tools were run in a fixed order and the review was written by rule.
+              This is the automatic check: the tools were run in a fixed order and the review was written by rule, with no LLM{record.notes.length ? ` (${record.notes.join('; ')})` : ''}.
+              Press the button above and the LLM agent chooses its own tool calls.
             </p>
           )}
           <h3 className={`${heading} mt-3`}>Tool calls, in order · click one to see what it returned</h3>

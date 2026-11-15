@@ -56,7 +56,7 @@ The orchestrator follows ATC's suggested architecture. Every event goes through 
 
 ### The Incident Response Agent: an LLM that calls tools
 
-After every event, once the fleet has recovered by itself, one LLM agent investigates (`backend/api/incident.py`, `backend/llm/tool_agent.py`). It decides which tools to call; the server validates the arguments and runs them:
+After an event, once the fleet has recovered by itself, one LLM agent can investigate (`backend/api/incident.py`, `backend/llm/tool_agent.py`). By default it runs when the operator presses *Let the LLM agent investigate* on the Agents page, because each investigation is several model calls and the free Groq tier allows few per minute; `INCIDENT_AGENT_AUTO=1` makes it run on every event. Until then each incident carries an automatic check: the same tools in a fixed order and a rule-based review, with no LLM. It decides which tools to call; the server validates the arguments and runs them:
 
 | Tool | What it returns |
 |---|---|
@@ -88,7 +88,7 @@ The **Agents** page shows this for any re-plan: the full conversation (filter by
 
 ```bash
 cd backend
-.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 255 tests
+.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 256 tests
 .venv/bin/python -m scripts.benchmark --n 50       # coordinator vs baseline table
 .venv/bin/python -m scripts.export_demo            # writes results/
 ```

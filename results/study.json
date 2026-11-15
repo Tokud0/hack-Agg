@@ -1,0 +1,567 @@
+{
+  "benchmark": {
+    "shifts": 300,
+    "jobs_per_shift": 10.0,
+    "mean": {
+      "coordinator": {
+        "jobs_completed": 6.24,
+        "priority1_completed": 2.48,
+        "priority_score": 15.866666666666667,
+        "travel_hours": 6.853166666666666,
+        "idle_hours": 0.05843333333333334,
+        "makespan_hours": 7.691333333333334,
+        "unassignable": 3.76,
+        "invariant_violations": 0.0,
+        "share_done": 0.624,
+        "travel_per_job": 1.0982638888888887,
+        "violations_total": 0
+      },
+      "baseline": {
+        "jobs_completed": 4.946666666666666,
+        "priority1_completed": 1.66,
+        "priority_score": 11.56,
+        "travel_hours": 7.3504,
+        "idle_hours": 0.35233333333333333,
+        "makespan_hours": 7.157833333333333,
+        "unassignable": 5.053333333333334,
+        "invariant_violations": 0.0,
+        "share_done": 0.49466666666666664,
+        "travel_per_job": 1.4859299191374662,
+        "violations_total": 0
+      },
+      "edf": {
+        "jobs_completed": 5.84,
+        "priority1_completed": 1.9366666666666668,
+        "priority_score": 13.67,
+        "travel_hours": 7.4791333333333325,
+        "idle_hours": 0.3879666666666667,
+        "makespan_hours": 7.758,
+        "unassignable": 4.16,
+        "invariant_violations": 0.0,
+        "share_done": 0.584,
+        "travel_per_job": 1.280673515981735,
+        "violations_total": 0
+      }
+    },
+    "percent_vs_baseline": {
+      "jobs_completed": 26.145552560646912,
+      "share_done": 26.145552560646905,
+      "priority1_completed": 49.397590361445786,
+      "priority_score": 37.254901960784316,
+      "travel_hours": -6.76471121753012,
+      "travel_per_job": -26.08911936261469,
+      "idle_hours": -83.41532639545885,
+      "unassignable": -25.593667546174153,
+      "makespan_hours": 7.453372761776158
+    },
+    "jobs_vs_baseline": {
+      "wins": 232,
+      "ties": 59,
+      "losses": 9
+    },
+    "ties_vs_baseline": {
+      "priority_score": {
+        "better": 41,
+        "same": 10,
+        "worse": 8
+      },
+      "travel_hours": {
+        "better": 35,
+        "same": 1,
+        "worse": 23
+      },
+      "idle_hours": {
+        "better": 52,
+        "same": 3,
+        "worse": 4
+      },
+      "better_on_at_least_one": 58
+    },
+    "percent_vs_edf": {
+      "jobs_completed": 6.849315068493158,
+      "share_done": 6.849315068493158,
+      "priority1_completed": 28.05507745266781,
+      "priority_score": 16.069251402097056,
+      "travel_hours": -8.369508053517789,
+      "travel_per_job": -14.243257537266654,
+      "idle_hours": -84.9385686055503,
+      "unassignable": -9.615384615384624,
+      "makespan_hours": -0.8593280054996962
+    },
+    "jobs_vs_edf": {
+      "wins": 131,
+      "ties": 133,
+      "losses": 36
+    },
+    "ties_vs_edf": {
+      "priority_score": {
+        "better": 79,
+        "same": 44,
+        "worse": 10
+      },
+      "travel_hours": {
+        "better": 84,
+        "same": 11,
+        "worse": 38
+      },
+      "idle_hours": {
+        "better": 121,
+        "same": 6,
+        "worse": 6
+      },
+      "better_on_at_least_one": 129
+    }
+  },
+  "none": {
+    "shifts": 300,
+    "jobs_per_shift": 8.056666666666667,
+    "mean": {
+      "coordinator": {
+        "jobs_completed": 8.056666666666667,
+        "priority1_completed": 2.223333333333333,
+        "priority_score": 18.843333333333334,
+        "travel_hours": 9.266433333333334,
+        "idle_hours": 1.1789,
+        "makespan_hours": 9.278,
+        "unassignable": 0.0,
+        "invariant_violations": 0.0,
+        "share_done": 1.0,
+        "travel_per_job": 1.1501572196938352,
+        "violations_total": 0
+      },
+      "baseline": {
+        "jobs_completed": 6.25,
+        "priority1_completed": 1.63,
+        "priority_score": 14.326666666666666,
+        "travel_hours": 8.902633333333334,
+        "idle_hours": 1.6022,
+        "makespan_hours": 7.593833333333333,
+        "unassignable": 1.8066666666666666,
+        "invariant_violations": 0.0,
+        "share_done": 0.775755068266446,
+        "travel_per_job": 1.4244213333333333,
+        "violations_total": 0
+      },
+      "edf": {
+        "jobs_completed": 7.44,
+        "priority1_completed": 2.0966666666666667,
+        "priority_score": 17.52,
+        "travel_hours": 10.207533333333334,
+        "idle_hours": 1.6763,
+        "makespan_hours": 9.074833333333332,
+        "unassignable": 0.6166666666666667,
+        "invariant_violations": 0.0,
+        "share_done": 0.9234588332643773,
+        "travel_per_job": 1.3719802867383513,
+        "violations_total": 0
+      }
+    },
+    "percent_vs_baseline": {
+      "jobs_completed": 28.906666666666663,
+      "share_done": 28.906666666666663,
+      "priority1_completed": 36.40081799591002,
+      "priority_score": 31.526291298278274,
+      "travel_hours": 4.086431355516526,
+      "travel_per_job": -19.25442333819053,
+      "idle_hours": -26.41992260641618,
+      "unassignable": -100.0,
+      "makespan_hours": 22.178083093738348
+    },
+    "jobs_vs_baseline": {
+      "wins": 269,
+      "ties": 31,
+      "losses": 0
+    },
+    "ties_vs_baseline": {
+      "priority_score": {
+        "better": 0,
+        "same": 31,
+        "worse": 0
+      },
+      "travel_hours": {
+        "better": 24,
+        "same": 5,
+        "worse": 2
+      },
+      "idle_hours": {
+        "better": 18,
+        "same": 5,
+        "worse": 8
+      },
+      "better_on_at_least_one": 27
+    },
+    "percent_vs_edf": {
+      "jobs_completed": 8.288530465949814,
+      "share_done": 8.288530465949826,
+      "priority1_completed": 6.04133545310015,
+      "priority_score": 7.553272450532729,
+      "travel_hours": -9.219661295905643,
+      "travel_per_job": -16.168094336972032,
+      "idle_hours": -29.672492990514815,
+      "unassignable": -100.0,
+      "makespan_hours": 2.238792264320756
+    },
+    "jobs_vs_edf": {
+      "wins": 154,
+      "ties": 146,
+      "losses": 0
+    },
+    "ties_vs_edf": {
+      "priority_score": {
+        "better": 0,
+        "same": 146,
+        "worse": 0
+      },
+      "travel_hours": {
+        "better": 109,
+        "same": 35,
+        "worse": 2
+      },
+      "idle_hours": {
+        "better": 109,
+        "same": 7,
+        "worse": 30
+      },
+      "better_on_at_least_one": 140
+    }
+  },
+  "low": {
+    "shifts": 300,
+    "jobs_per_shift": 8.056666666666667,
+    "mean": {
+      "coordinator": {
+        "jobs_completed": 7.126666666666667,
+        "priority1_completed": 2.15,
+        "priority_score": 16.99,
+        "travel_hours": 8.414633333333333,
+        "idle_hours": 1.1882333333333335,
+        "makespan_hours": 8.737,
+        "unassignable": 0.93,
+        "invariant_violations": 0.0,
+        "share_done": 0.8845676458419528,
+        "travel_per_job": 1.1807249766136576,
+        "violations_total": 0
+      },
+      "baseline": {
+        "jobs_completed": 5.6433333333333335,
+        "priority1_completed": 1.61,
+        "priority_score": 13.156666666666666,
+        "travel_hours": 8.381233333333332,
+        "idle_hours": 1.5228333333333335,
+        "makespan_hours": 7.342833333333333,
+        "unassignable": 2.4133333333333336,
+        "invariant_violations": 0.0,
+        "share_done": 0.7004551096400496,
+        "travel_per_job": 1.485156526875369,
+        "violations_total": 0
+      },
+      "edf": {
+        "jobs_completed": 6.64,
+        "priority1_completed": 2.0366666666666666,
+        "priority_score": 15.903333333333334,
+        "travel_hours": 9.461033333333333,
+        "idle_hours": 1.5981999999999998,
+        "makespan_hours": 8.714333333333334,
+        "unassignable": 1.4166666666666667,
+        "invariant_violations": 0.0,
+        "share_done": 0.8241621845262722,
+        "travel_per_job": 1.4248544176706828,
+        "violations_total": 0
+      }
+    },
+    "percent_vs_baseline": {
+      "jobs_completed": 26.284701712935615,
+      "share_done": 26.284701712935615,
+      "priority1_completed": 33.540372670807436,
+      "priority_score": 29.13605269825183,
+      "travel_hours": 0.3985093681518669,
+      "travel_per_job": -20.49828046759536,
+      "idle_hours": -21.972200941227975,
+      "unassignable": -61.46408839779005,
+      "makespan_hours": 18.98676714256532
+    },
+    "jobs_vs_baseline": {
+      "wins": 245,
+      "ties": 54,
+      "losses": 1
+    },
+    "ties_vs_baseline": {
+      "priority_score": {
+        "better": 6,
+        "same": 42,
+        "worse": 6
+      },
+      "travel_hours": {
+        "better": 39,
+        "same": 8,
+        "worse": 7
+      },
+      "idle_hours": {
+        "better": 35,
+        "same": 7,
+        "worse": 12
+      },
+      "better_on_at_least_one": 48
+    },
+    "percent_vs_edf": {
+      "jobs_completed": 7.329317269076315,
+      "share_done": 7.329317269076305,
+      "priority1_completed": 5.564648117839606,
+      "priority_score": 6.8329490672814766,
+      "travel_hours": -11.060102666727738,
+      "travel_per_job": -17.13364102531415,
+      "idle_hours": -25.651774913444275,
+      "unassignable": -34.35294117647059,
+      "makespan_hours": 0.2601078682630067
+    },
+    "jobs_vs_edf": {
+      "wins": 133,
+      "ties": 159,
+      "losses": 8
+    },
+    "ties_vs_edf": {
+      "priority_score": {
+        "better": 12,
+        "same": 140,
+        "worse": 7
+      },
+      "travel_hours": {
+        "better": 113,
+        "same": 34,
+        "worse": 12
+      },
+      "idle_hours": {
+        "better": 117,
+        "same": 10,
+        "worse": 32
+      },
+      "better_on_at_least_one": 151
+    }
+  },
+  "high": {
+    "shifts": 300,
+    "jobs_per_shift": 8.056666666666667,
+    "mean": {
+      "coordinator": {
+        "jobs_completed": 5.656666666666666,
+        "priority1_completed": 1.85,
+        "priority_score": 13.8,
+        "travel_hours": 7.6523,
+        "idle_hours": 0.7959,
+        "makespan_hours": 8.109833333333333,
+        "unassignable": 2.4,
+        "invariant_violations": 0.0,
+        "share_done": 0.7021100537856847,
+        "travel_per_job": 1.3527931644077784,
+        "violations_total": 0
+      },
+      "baseline": {
+        "jobs_completed": 4.6433333333333335,
+        "priority1_completed": 1.45,
+        "priority_score": 11.08,
+        "travel_hours": 7.871733333333333,
+        "idle_hours": 1.0327666666666666,
+        "makespan_hours": 7.412333333333333,
+        "unassignable": 3.4133333333333336,
+        "invariant_violations": 0.0,
+        "share_done": 0.5763342987174183,
+        "travel_per_job": 1.6952763819095478,
+        "violations_total": 0
+      },
+      "edf": {
+        "jobs_completed": 5.296666666666667,
+        "priority1_completed": 1.7033333333333334,
+        "priority_score": 12.87,
+        "travel_hours": 8.566033333333333,
+        "idle_hours": 1.0267333333333333,
+        "makespan_hours": 8.253333333333334,
+        "unassignable": 2.76,
+        "invariant_violations": 0.0,
+        "share_done": 0.6574265618535374,
+        "travel_per_job": 1.6172498426683448,
+        "violations_total": 0
+      }
+    },
+    "percent_vs_baseline": {
+      "jobs_completed": 21.823402727925327,
+      "share_done": 21.82340272792534,
+      "priority1_completed": 27.586206896551737,
+      "priority_score": 24.548736462093867,
+      "travel_hours": -2.7876113689488076,
+      "travel_per_job": -20.202205443102947,
+      "idle_hours": -22.935157989865402,
+      "unassignable": -29.687500000000007,
+      "makespan_hours": 9.409992355083867
+    },
+    "jobs_vs_baseline": {
+      "wins": 205,
+      "ties": 86,
+      "losses": 9
+    },
+    "ties_vs_baseline": {
+      "priority_score": {
+        "better": 23,
+        "same": 45,
+        "worse": 18
+      },
+      "travel_hours": {
+        "better": 61,
+        "same": 8,
+        "worse": 17
+      },
+      "idle_hours": {
+        "better": 67,
+        "same": 12,
+        "worse": 7
+      },
+      "better_on_at_least_one": 80
+    },
+    "percent_vs_edf": {
+      "jobs_completed": 6.796727501573306,
+      "share_done": 6.796727501573313,
+      "priority1_completed": 8.610567514677108,
+      "priority_score": 7.2261072261072385,
+      "travel_hours": -10.66693646612006,
+      "travel_per_job": -16.3522463433499,
+      "idle_hours": -22.482306343743904,
+      "unassignable": -13.043478260869563,
+      "makespan_hours": -1.7386914378029237
+    },
+    "jobs_vs_edf": {
+      "wins": 119,
+      "ties": 154,
+      "losses": 27
+    },
+    "ties_vs_edf": {
+      "priority_score": {
+        "better": 28,
+        "same": 106,
+        "worse": 20
+      },
+      "travel_hours": {
+        "better": 109,
+        "same": 28,
+        "worse": 17
+      },
+      "idle_hours": {
+        "better": 113,
+        "same": 15,
+        "worse": 26
+      },
+      "better_on_at_least_one": 142
+    }
+  },
+  "all": {
+    "shifts": 1200,
+    "jobs_per_shift": 8.5425,
+    "mean": {
+      "coordinator": {
+        "jobs_completed": 6.77,
+        "priority1_completed": 2.1758333333333333,
+        "priority_score": 16.375,
+        "travel_hours": 8.046633333333332,
+        "idle_hours": 0.8053666666666667,
+        "makespan_hours": 8.454041666666667,
+        "unassignable": 1.7725,
+        "invariant_violations": 0.0,
+        "share_done": 0.7925080479953175,
+        "travel_per_job": 1.188572131954702,
+        "violations_total": 0
+      },
+      "baseline": {
+        "jobs_completed": 5.370833333333334,
+        "priority1_completed": 1.5875,
+        "priority_score": 12.530833333333334,
+        "travel_hours": 8.1265,
+        "idle_hours": 1.1275333333333333,
+        "makespan_hours": 7.376708333333332,
+        "unassignable": 3.171666666666667,
+        "invariant_violations": 0.0,
+        "share_done": 0.6287191493512828,
+        "travel_per_job": 1.513079906904577,
+        "violations_total": 0
+      },
+      "edf": {
+        "jobs_completed": 6.304166666666666,
+        "priority1_completed": 1.9433333333333334,
+        "priority_score": 14.990833333333333,
+        "travel_hours": 8.928433333333334,
+        "idle_hours": 1.1723,
+        "makespan_hours": 8.450125,
+        "unassignable": 2.2383333333333333,
+        "invariant_violations": 0.0,
+        "share_done": 0.7379767827529021,
+        "travel_per_job": 1.4162749504296102,
+        "violations_total": 0
+      }
+    },
+    "percent_vs_baseline": {
+      "jobs_completed": 26.051202482544593,
+      "share_done": 26.0512024825446,
+      "priority1_completed": 37.06036745406824,
+      "priority_score": 30.67766176763982,
+      "travel_hours": -0.9827929202813959,
+      "travel_per_job": -21.44683657942067,
+      "idle_hours": -28.572695559628684,
+      "unassignable": -44.11455596426695,
+      "makespan_hours": 14.60452663507325
+    },
+    "jobs_vs_baseline": {
+      "wins": 951,
+      "ties": 230,
+      "losses": 19
+    },
+    "ties_vs_baseline": {
+      "priority_score": {
+        "better": 70,
+        "same": 128,
+        "worse": 32
+      },
+      "travel_hours": {
+        "better": 159,
+        "same": 22,
+        "worse": 49
+      },
+      "idle_hours": {
+        "better": 172,
+        "same": 27,
+        "worse": 31
+      },
+      "better_on_at_least_one": 213
+    },
+    "percent_vs_edf": {
+      "jobs_completed": 7.389292795769993,
+      "share_done": 7.389292795769991,
+      "priority1_completed": 11.963979416809602,
+      "priority_score": 9.2334204235922,
+      "travel_hours": -9.876312753637277,
+      "travel_per_job": -16.077585669776706,
+      "idle_hours": -31.300292871563016,
+      "unassignable": -20.81161578555473,
+      "makespan_hours": 0.04635039915583512
+    },
+    "jobs_vs_edf": {
+      "wins": 537,
+      "ties": 592,
+      "losses": 71
+    },
+    "ties_vs_edf": {
+      "priority_score": {
+        "better": 119,
+        "same": 436,
+        "worse": 37
+      },
+      "travel_hours": {
+        "better": 415,
+        "same": 108,
+        "worse": 69
+      },
+      "idle_hours": {
+        "better": 460,
+        "same": 38,
+        "worse": 94
+      },
+      "better_on_at_least_one": 562
+    }
+  }
+}

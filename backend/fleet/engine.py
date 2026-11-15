@@ -152,7 +152,7 @@ def apply_event(run: Run, event: EventIn) -> Run:
         message = f"{event.job_id} priority set to P{event.priority}"
     elif event.type == "weather" and event.job_type:
         until = event.until if event.until is not None else world.time + (event.hours or 0.0)
-        world = hold_for_weather(world, event.job_type, until)
+        world = hold_for_weather(world, event.job_type, until, run.network)
         trigger = {**trigger, "until": round(until, 2)}
         message = f"Weather: no {WORK_NAME[event.job_type]} until {clock_time(until)}"
     else:

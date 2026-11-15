@@ -582,3 +582,15 @@ def test_every_field_of_a_random_shift_has_work(seed):
     scenario = random_shift(seed)
     assert {f.id for f in scenario.fields} == {j.field_id for j in scenario.jobs}
     assert [f.id for f in scenario.fields] == [f"F{i + 1}" for i in range(len(scenario.fields))]
+
+
+def test_work_that_a_weather_hold_would_make_late_is_released_not_finished_late(scenario):
+    run = _run_until(start(scenario, "coordinator", with_demo_events=False), 1.2)
+    spraying = next(j for j in run.world.jobs.values() if j.type == "spray" and j.status == JobStatus.IN_PROGRESS)
+    tight = replace(run, world=replace(run.world, jobs={**run.world.jobs, spraying.id: replace(spraying, deadline=run.world.time + spraying.remaining_hours + 0.2)}))
+    held = apply_event(tight, EventIn(at=tight.world.time, type="weather", job_type="spray", hours=2.0))
+    assert held.world.tractors[spraying.tractor_id].current_job != spraying.id
+    assert held.world.jobs[spraying.id].progress == pytest.approx(spraying.progress)
+    done = run_to_end(held)
+    assert all(j.completed_at <= j.deadline + 1e-6 for j in done.world.jobs.values() if j.status == JobStatus.DONE)
+    assert metrics(done)["invariant_violations"] == 0

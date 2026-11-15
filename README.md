@@ -73,7 +73,7 @@ The **Agents** page shows this for any re-plan: the full conversation (filter by
 
 ```bash
 cd backend
-.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 249 tests
+.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 251 tests
 .venv/bin/python -m scripts.benchmark --n 50       # coordinator vs baseline table
 .venv/bin/python -m scripts.export_demo            # writes results/
 ```
@@ -93,6 +93,8 @@ Our coordinator against two greedy dispatchers that never plan ahead: **FCFS** (
 | constraint violations | **0** | 0 | 0 |
 
 By jobs completed, the coordinator wins 43, ties 5 and loses 2 against FCFS; against EDF it wins 25, ties 19 and loses 6. On priority-weighted output it wins 39, ties 5 and loses 6 against EDF. The losses happen when a breakdown hits a plan that was optimal before the breakdown.
+
+**Larger study** (`results/study.md`, 1,200 generated shifts in four families, with every metric explained): against FCFS the coordinator finishes 26.1% more jobs on time and 37.1% more urgent jobs, with 28.6% less idle time and 21.4% less driving per job done; total driving is level (-1.0%). It is ahead on jobs in 79% of shifts, level in 19% and behind in 2%. On the shifts where the job count is level, it is still ahead on priority-weighted output, driving or idle time in 93% of them. No constraint violations in any shift. Reproduce with `python -m scripts.study --n 300`.
 
 Demo scenario, with T1 breaking down at 08:00: the coordinator completes 8 jobs, 3 of them urgent, with one refuel stop. EDF completes 7 (2 urgent) and FCFS 7 (1 urgent). It drives more in total than FCFS (11.96 h against 10.66 h) because it does one more job; per completed job it drives slightly less (1.49 h against 1.52 h), and it idles 0.04 h against 0.29 h. Breaking any tractor at any half hour of this shift (48 cases), the coordinator never completes fewer jobs than FCFS and never idles more.
 

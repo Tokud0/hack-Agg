@@ -6,6 +6,7 @@ import time
 from dataclasses import dataclass, replace
 
 from .coordinator import Candidate, ObserverFactory, SearchObserver, plan_with_trace
+from .feasibility import start_context
 from .invariants import InvariantReport, check_plan
 from .models import Job, JobStatus, Plan, TractorStatus, World
 from .routing import RoadNetwork, build_network
@@ -154,16 +155,36 @@ def reroute_in_transit(world: World, network: RoadNetwork) -> World:
 WORK_NAME = {"spray": "spraying", "mow": "mowing"}
 
 
-def hold_for_weather(world: World, job_type: str, until: float) -> World:
+def hold_for_weather(world: World, job_type: str, until: float, network: RoadNetwork | None = None) -> World:
     """The weather rules out one kind of work until `until`: no unfinished job of that kind may be worked before then.
 
-    Work already under way stops where it is and keeps its progress; its tractor stands by at the field.
+    Work already under way stops where it is and keeps its progress; its tractor stands by at the field,
+    unless the wait would make that job late, in which case the job is released.
     """
     jobs = {
         jid: replace(job, not_before=max(job.not_before, until)) if job.type == job_type and job.status != JobStatus.DONE else job
         for jid, job in world.jobs.items()
     }
-    return replace(world, jobs=jobs)
+    return _release_work_the_hold_makes_late(replace(world, jobs=jobs), network or build_network(world))
+
+
+def _release_work_the_hold_makes_late(world: World, network: RoadNetwork) -> World:
+    """A tractor does not sit out a hold for a job that would then miss its deadline.
+
+    Such a job goes back to the pool with its progress kept (the planner will flag it as not doable or
+    give it to someone who can still make it), and the tractor is free for work that still counts.
+    """
+    jobs = dict(world.jobs)
+    tractors = dict(world.tractors)
+    for tid, tractor in world.tractors.items():
+        job = world.jobs.get(tractor.current_job) if tractor.current_job else None
+        if job is None or tractor.status == TractorStatus.BROKEN or tractor.refuel_stop:
+            continue
+        if start_context(tractor, world, network).time <= job.deadline + 1e-6:
+            continue
+        jobs[job.id] = _release(job, tid, world.time)
+        tractors[tid] = replace(tractor, current_job=None, path=(), status=TractorStatus.IDLE)
+    return replace(world, jobs=jobs, tractors=tractors)
 
 
 def weather_holds(world: World) -> list[dict]:

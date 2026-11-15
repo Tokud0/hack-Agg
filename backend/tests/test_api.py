@@ -428,3 +428,45 @@ def test_agent_does_not_call_a_model_by_itself_but_does_on_request(client, monke
     res = client.post(f"/api/incidents/{index}/investigate")
     assert res.status_code == 200 and asked  # asked for: now the model is consulted
     assert client.post("/api/incidents/0/investigate").status_code == 404
+
+
+# --- scenario from a description keeps what was asked for ---------------------
+
+
+def test_described_scenario_keeps_every_field_and_arms_the_described_breakdown(client, monkeypatch):
+    from fleet.scenario import EventDraft, FieldDraft, JobDraftIn, ScenarioDraft, TractorDraft
+    draft = ScenarioDraft(
+        name="Ten fields",
+        tractors=[TractorDraft(implement="sprayer"), TractorDraft(implement="sprayer"), TractorDraft(implement="mower")],
+        fields=[FieldDraft(x=x, y=y) for x in (1, 3, 5, 7, 9) for y in (3, 7)],
+        jobs=[JobDraftIn(type="spray", field_number=n, priority=2, deadline_hours=8, work_hours=1) for n in range(1, 7)],
+        events=[EventDraft(type="breakdown", at_hours=2.0, tractor_number=1), EventDraft(type="breakdown", at_hours=3.0, tractor_number=9)],
+    )
+    monkeypatch.setattr(claude, "_ask", lambda system, user, schema: (draft, "groq"))
+    body = client.post("/api/scenario/describe", json={"text": "3 tractors, 10 fields, one breakdown"}).json()
+    scenario = body["scenario"]
+    assert len(scenario["fields"]) == 10 and len(scenario["tractors"]) == 3
+    assert {j["field_id"] for j in scenario["jobs"]} == {f["id"] for f in scenario["fields"]}  # no field is left without work
+    assert [(e["type"], e["tractor_id"], e["at"]) for e in scenario["demo_events"]] == [("breakdown", "T1", 2.0)]
+    assert scenario["auto_events"] is True
+    assert "Event at 08:00: T1 breaks down" in body["changes"] and any("added so every field has work" in c for c in body["changes"])
+    assert client.post("/api/scenario", json=scenario).status_code == 200
+    assert client.get("/api/state").json()["surprises_left"] == 1
+
+
+def test_described_scenario_offline_keeps_the_field_count_and_a_mentioned_breakdown(client):
+    body = client.post("/api/scenario/describe", json={"text": "3 tractors, 10 fields, 12 jobs and one breakdown"}).json()
+    scenario = body["scenario"]
+    assert body["source"] == "template" and len(scenario["fields"]) == 10 and len(scenario["tractors"]) == 3
+    assert [e["type"] for e in scenario["demo_events"]] == ["breakdown"]
+
+
+def test_impossible_job_in_a_described_scenario_is_kept_and_reported():
+    from fleet.generate import make_feasible
+    from fleet.scenario import random_live_scenario
+    scenario = random_live_scenario(1)
+    heavy = scenario.model_copy(update={"jobs": [scenario.jobs[0].model_copy(update={"work_hours": 40.0}), *scenario.jobs[1:]]})
+    kept, notes = make_feasible(heavy, remove_impossible=False)
+    assert len(kept.jobs) == len(heavy.jobs) and any("kept, but it cannot be done" in n for n in notes)
+    removed, _ = make_feasible(heavy)
+    assert heavy.jobs[0].id not in {j.id for j in removed.jobs}  # the default still drops what cannot be done

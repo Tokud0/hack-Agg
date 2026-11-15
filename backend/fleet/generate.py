@@ -6,13 +6,14 @@ time, on the plan the coordinator itself makes. Surprise events then make it har
 
 from __future__ import annotations
 
+import math
 import random
 from typing import Literal
 
 from .coordinator import plan
 from .models import JOB_TYPE_TO_IMPLEMENT
 from .routing import build_network
-from .scenario import SHIFT_HOURS, EventIn, ScenarioIn, random_live_scenario, to_world
+from .scenario import DEFAULT_SPEED, MAX_JOBS, SHIFT_HOURS, EventIn, JobIn, ScenarioIn, random_live_scenario, to_world
 
 DEADLINE_STEP_HOURS = 1.0
 MAX_FIX_ROUNDS = 16
@@ -33,31 +34,37 @@ def impossible_at_start(scenario: ScenarioIn) -> dict[str, str]:
     return plan(world, build_network(world)).unassignable
 
 
-def make_feasible(scenario: ScenarioIn) -> tuple[ScenarioIn, list[str]]:
+def make_feasible(scenario: ScenarioIn, remove_impossible: bool = True) -> tuple[ScenarioIn, list[str]]:
     """Adjust a scenario until every job can be done from the start; say what was changed.
 
     A job no tractor can do in time gets a later deadline, an hour at a time, up to the end of
-    the shift. A job that still does not fit (no matching implement, or too much work) is removed.
+    the shift. A job that still does not fit (no matching implement, or too much work) is removed,
+    or, with `remove_impossible` off, kept and reported: what the operator asked for is not thrown away.
     Raises ValueError if nothing doable is left.
     """
     implements = {t.implement for t in scenario.tractors}
     original = {j.id: j.deadline for j in scenario.jobs}
     removed: dict[str, str] = {}
+    kept_impossible: dict[str, str] = {}
     current = scenario
     for _ in range(MAX_FIX_ROUNDS):
-        stuck = impossible_at_start(current)
+        stuck = {jid: why for jid, why in impossible_at_start(current).items() if jid not in kept_impossible}
         if not stuck:
             break
         jobs = []
         for job in current.jobs:
             if job.id not in stuck:
                 jobs.append(job)
-            elif JOB_TYPE_TO_IMPLEMENT[job.type] not in implements:
-                removed[job.id] = f"no tractor has a {JOB_TYPE_TO_IMPLEMENT[job.type].value}"
-            elif job.deadline < SHIFT_HOURS:
+            elif JOB_TYPE_TO_IMPLEMENT[job.type] in implements and job.deadline < SHIFT_HOURS:
                 jobs.append(job.model_copy(update={"deadline": min(SHIFT_HOURS, job.deadline + DEADLINE_STEP_HOURS)}))
             else:
-                removed[job.id] = "it does not fit in the shift even with the latest deadline"
+                why = (f"no tractor has a {JOB_TYPE_TO_IMPLEMENT[job.type].value}" if JOB_TYPE_TO_IMPLEMENT[job.type] not in implements
+                       else "it does not fit in the shift even with the latest deadline")
+                if remove_impossible:
+                    removed[job.id] = why
+                else:
+                    kept_impossible[job.id] = why
+                    jobs.append(job)
         if not jobs:
             raise ValueError("no job in this scenario can be done by this fleet")
         current = current.model_copy(update={"jobs": jobs})
@@ -67,7 +74,51 @@ def make_feasible(scenario: ScenarioIn) -> tuple[ScenarioIn, list[str]]:
         f"{j.id}: deadline moved from {clock(original[j.id], start)} to {clock(j.deadline, start)} so it can be done"
         for j in current.jobs if j.deadline != original[j.id]
     ]
-    return current, [*moved, *(f"{jid} removed: {why}" for jid, why in sorted(removed.items()))]
+    return current, [
+        *moved,
+        *(f"{jid} removed: {why}" for jid, why in sorted(removed.items())),
+        *(f"{jid} kept, but it cannot be done: {why}" for jid, why in sorted(kept_impossible.items())),
+    ]
+
+
+FILLER_WORK_HOURS = 1.0
+FILLER_SLACK_HOURS = 2.0
+
+
+def with_work_on_every_field(scenario: ScenarioIn) -> tuple[ScenarioIn, list[str]]:
+    """Give every field without a job one job, so no field the operator asked for has to be dropped."""
+    implements = {t.implement.value for t in scenario.tractors}
+    job_type = "spray" if "sprayer" in implements else "mow"
+    jobs = list(scenario.jobs)
+    added: list[str] = []
+    for f in scenario.fields:
+        if any(j.field_id == f.id for j in jobs) or len(jobs) >= MAX_JOBS:
+            continue
+        numbers = [int(j.id[1:]) for j in jobs if j.id[1:].isdigit()]
+        reach = math.hypot(f.x - scenario.depot.x, f.y - scenario.depot.y) / DEFAULT_SPEED + FILLER_WORK_HOURS + FILLER_SLACK_HOURS
+        job = JobIn(id=f"J{max(numbers, default=0) + 1:02d}", type=job_type, field_id=f.id, priority=2,
+                    deadline=min(SHIFT_HOURS, math.ceil(reach * 2) / 2), work_hours=FILLER_WORK_HOURS)
+        jobs.append(job)
+        added.append(job.id)
+    notes = [f"{', '.join(added)} added so every field has work"] if added else []
+    return scenario.model_copy(update={"jobs": jobs}), notes
+
+
+def describe_events(scenario: ScenarioIn) -> list[str]:
+    """The armed events in words, so the operator can see what was understood."""
+    start = scenario.shift_start_hour
+    lines = []
+    for e in scenario.demo_events:
+        when = clock(e.at, start)
+        if e.type == "breakdown":
+            lines.append(f"Event at {when}: {e.tractor_id} breaks down")
+        elif e.type == "block_road":
+            lines.append(f"Event at {when}: road {e.a}–{e.b} closes")
+        elif e.type == "change_priority":
+            lines.append(f"Event at {when}: {e.job_id} becomes P{e.priority}")
+        elif e.type == "weather":
+            lines.append(f"Event at {when}: no {'spraying' if e.job_type == 'spray' else 'mowing'} for {e.hours:g} h")
+    return lines
 
 
 Trouble = Literal["none", "low", "high"]

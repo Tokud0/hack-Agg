@@ -15,7 +15,7 @@ from typing import Literal
 
 from pydantic import BaseModel, Field
 
-from fleet.scenario import ScenarioDraft, ScenarioIn, random_live_scenario, scenario_from_draft
+from fleet.scenario import EventIn, ScenarioDraft, ScenarioIn, random_live_scenario, scenario_from_draft
 
 from .provider import provider_name, structured
 
@@ -313,8 +313,14 @@ Return a scenario draft:
 - jobs: 1 to 14. type "spray" needs a sprayer, "mow" needs a mower. field_number is the 1-based position in fields.
   priority 1 is most urgent, 3 least. deadline_hours is hours after the 06:00 shift start (a 14:00 deadline is 8).
   work_hours between 0.5 and 3.
-Follow every number and detail the operator gives. Fill in whatever they leave out with sensible values,
-and make sure every job type has at least one tractor that can do it."""
+- events: what the operator says will go wrong during the shift; an empty list if they mention nothing.
+  breakdown: tractor_number. block_road: from_field_number and to_field_number (0 is the depot).
+  change_priority: job_number and priority. weather: work_type ("spray" or "mow") it stops, and hours.
+  at_hours is hours after the 06:00 start; if the operator gives no time, pick one between 1 and 4.
+  "One breakdown" means exactly one breakdown event. For fields you do not use in an event, return null.
+Follow every number the operator gives EXACTLY: if they ask for 10 fields, return 10 fields; 3 tractors, 3 tractors.
+Every field must have at least one job, so return at least as many jobs as fields.
+Fill in whatever they leave out with sensible values, and make sure every job type has a tractor that can do it."""
 
 _COUNT = r"(\d+)\s*(?:x\s*)?"
 
@@ -333,7 +339,12 @@ def scenario_from_text(text: str, seed: int) -> tuple[ScenarioIn, str]:
         except ValueError:
             logger.warning("LLM scenario draft was unusable, falling back to a generated one")
     counts = (_count(text, "tractor"), _count(text, "field"), _count(text, r"(?:job|task)"))
-    return random_live_scenario(seed, *counts), "template"
+    scenario = random_live_scenario(seed, *counts)
+    if re.search(r"break\s?down|broke|полом|слом", text.lower()) and len(scenario.tractors) >= 2:
+        # Offline, the one kind of trouble that is recognised: a breakdown, two hours in.
+        breakdown = EventIn(at=2.0, type="breakdown", tractor_id=scenario.tractors[0].id, source="surprise")
+        scenario = scenario.model_copy(update={"demo_events": [breakdown], "auto_events": True})
+    return scenario, "template"
 
 
 # --- shift briefing ----------------------------------------------------------

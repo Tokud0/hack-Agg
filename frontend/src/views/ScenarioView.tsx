@@ -8,7 +8,7 @@ import { Segmented, ViewHeader } from '../components/shell/ViewHeader'
 import { inputCls } from '../components/tools/shared'
 import {
   EMPTY_SCENARIO, MAX_FIELDS, TROUBLE_LEVELS, checkScenario, movedField, updatedJob, updatedTractor, withField, withJob, withTractor,
-  troubleOf, withoutField, withoutJob, withoutTractor, type Scenario,
+  troubleOf, withValidEvents, withoutField, withoutJob, withoutTractor, type Scenario,
 } from '../scenario'
 
 const EXAMPLE = 'Two sprayers and one mower, 6 fields. Spray four of them, two are urgent and due by 10:00. Mow the other two by the afternoon.'
@@ -73,8 +73,8 @@ export function ScenarioView({ onStarted }: ScenarioViewProps) {
     }
   }
 
-  /** A manual change. Generated events may point at things that no longer exist, so they are dropped and made anew on start. */
-  const edit = (change: (s: Scenario) => Scenario) => setScenario((s) => ({ ...change(s), demo_events: [] }))
+  /** A manual change. Events stay unless they point at something the change removed. */
+  const edit = (change: (s: Scenario) => Scenario) => setScenario((s) => withValidEvents(change(s)))
 
   const removeField = (id: string) => {
     edit((s) => withoutField(s, id))
@@ -83,6 +83,7 @@ export function ScenarioView({ onStarted }: ScenarioViewProps) {
 
   const { blockers, warnings } = checkScenario(scenario)
   const canAddField = scenario.fields.length < MAX_FIELDS
+  const plannedEvents = scenario.auto_events ? scenario.demo_events?.length ?? 0 : 0
 
   return (
     <div className="flex h-full flex-col gap-3">
@@ -155,10 +156,12 @@ export function ScenarioView({ onStarted }: ScenarioViewProps) {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <span className="text-xs font-bold uppercase tracking-widest text-white/60">What goes wrong by itself</span>
               <Segmented label="Trouble during the shift" options={TROUBLE_LEVELS} value={troubleOf(scenario)}
-                onChange={(level) => edit((s) => ({ ...s, auto_events: level !== 'none', trouble: level === 'high' ? 'high' : 'low' }))} />
+                onChange={(level) => setScenario((s) => ({ ...s, auto_events: level !== 'none', trouble: level === 'high' ? 'high' : 'low', demo_events: [] }))} />
             </div>
             <p className="mt-1 text-[11.5px] leading-snug text-white/50">
-              {TROUBLE_LEVELS.find((t) => t.id === troubleOf(scenario))?.hint}. Events arrive at random moments with nobody clicking; the fleet has to recover on its own.
+              {plannedEvents > 0
+                ? `${plannedEvents} event${plannedEvents === 1 ? '' : 's'} from the description or the generator will happen as listed. Pick a level to replace them with random ones.`
+                : `${TROUBLE_LEVELS.find((t) => t.id === troubleOf(scenario))?.hint}. Events arrive at random moments with nobody clicking; the fleet has to recover on its own.`}
             </p>
           </div>
           <TractorList tractors={scenario.tractors} onAdd={() => edit(withTractor)}

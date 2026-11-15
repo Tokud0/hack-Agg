@@ -207,6 +207,20 @@ class JobDraftIn(BaseModel):
     work_hours: float
 
 
+class EventDraft(BaseModel):
+    """Something the description says will go wrong during the shift. Numbers are 1-based positions in the draft's lists."""
+
+    type: Literal["breakdown", "block_road", "change_priority", "weather"]
+    at_hours: float  # hours after shift start
+    tractor_number: int | None = None  # breakdown
+    from_field_number: int | None = None  # block_road; 0 is the depot
+    to_field_number: int | None = None
+    job_number: int | None = None  # change_priority
+    priority: int | None = None
+    work_type: Literal["spray", "mow"] | None = None  # weather: the work it stops
+    hours: float | None = None  # weather: for how long
+
+
 class ScenarioDraft(BaseModel):
     """A scenario as a person (or the LLM reading a person) would give it: no ids, no fuel rates."""
 
@@ -214,6 +228,7 @@ class ScenarioDraft(BaseModel):
     tractors: list[TractorDraft]
     fields: list[FieldDraft]
     jobs: list[JobDraftIn]
+    events: list[EventDraft] = []
 
 
 def _clamp(value: float, low: float, high: float) -> float:
@@ -243,16 +258,44 @@ def scenario_from_draft(draft: ScenarioDraft) -> ScenarioIn:
         taken.add(cell)
         fields.append(FieldIn(id=f"F{i + 1}", x=cell[0], y=cell[1]))
     jobs = []
-    for j in draft.jobs[:MAX_JOBS]:
+    job_id_of: dict[int, str] = {}  # the draft's job number -> the id it got (jobs on a missing field are dropped)
+    for number, j in enumerate(draft.jobs[:MAX_JOBS], start=1):
         if not 1 <= j.field_number <= len(fields):
             continue
         work = round(_clamp(j.work_hours, 0.25, 6), 2)
-        jobs.append(JobIn(id=f"J{len(jobs) + 1:02d}", type=j.type, field_id=fields[j.field_number - 1].id,
+        job_id_of[number] = f"J{len(jobs) + 1:02d}"
+        jobs.append(JobIn(id=job_id_of[number], type=j.type, field_id=fields[j.field_number - 1].id,
                           priority=int(_clamp(j.priority, 1, 3)),
                           deadline=round(_clamp(j.deadline_hours, work + 0.5, SHIFT_HOURS), 2), work_hours=work))
     if not tractors or not fields or not jobs:
         raise ValueError("a scenario needs at least one tractor, one field and one job on an existing field")
-    return ScenarioIn(name=draft.name.strip()[:60] or "Custom shift", depot=DEPOT, tractors=tractors, fields=fields, jobs=jobs)
+    events = _events_from_draft(draft.events, tractors, fields, job_id_of)
+    return ScenarioIn(name=draft.name.strip()[:60] or "Custom shift", depot=DEPOT, tractors=tractors, fields=fields, jobs=jobs,
+                      demo_events=events, auto_events=bool(events))
+
+
+MAX_DRAFT_EVENTS = 6
+
+
+def _events_from_draft(drafts: list[EventDraft], tractors: list[TractorIn], fields: list[FieldIn], job_id_of: dict[int, str]) -> list[EventIn]:
+    """The described events as events that fire by themselves. One that points at something that is not there is left out."""
+    def node(number: int | None) -> str | None:
+        if number == 0:
+            return DEPOT.id
+        return fields[number - 1].id if number is not None and 1 <= number <= len(fields) else None
+
+    events: list[EventIn] = []
+    for e in drafts[:MAX_DRAFT_EVENTS]:
+        at = round(_clamp(e.at_hours, 0.25, SHIFT_HOURS - 1), 2)
+        if e.type == "breakdown" and e.tractor_number is not None and 1 <= e.tractor_number <= len(tractors):
+            events.append(EventIn(at=at, type="breakdown", tractor_id=tractors[e.tractor_number - 1].id, source="surprise"))
+        elif e.type == "block_road" and node(e.from_field_number) and node(e.to_field_number) and node(e.from_field_number) != node(e.to_field_number):
+            events.append(EventIn(at=at, type="block_road", a=node(e.from_field_number), b=node(e.to_field_number), source="surprise"))
+        elif e.type == "change_priority" and e.job_number in job_id_of and e.priority in (1, 2, 3):
+            events.append(EventIn(at=at, type="change_priority", job_id=job_id_of[e.job_number], priority=e.priority, source="surprise"))
+        elif e.type == "weather" and e.work_type is not None:
+            events.append(EventIn(at=at, type="weather", job_type=e.work_type, hours=_clamp(e.hours or 1.0, 0.5, 6), source="surprise"))
+    return sorted(events, key=lambda e: e.at)
 
 
 def random_live_scenario(seed: int, n_tractors: int | None = None, n_fields: int | None = None, n_jobs: int | None = None) -> ScenarioIn:

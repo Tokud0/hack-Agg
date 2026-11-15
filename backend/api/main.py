@@ -20,7 +20,14 @@ load_dotenv()
 from fleet.engine import log_as_dicts, metrics  # noqa: E402
 from fleet.scenario import EventIn, ScenarioIn  # noqa: E402
 from fleet.why import explain_assignment  # noqa: E402
-from fleet.generate import impossible_at_start, make_feasible, random_shift, with_surprises, without_empty_fields  # noqa: E402
+from fleet.generate import (  # noqa: E402
+    describe_events,
+    impossible_at_start,
+    make_feasible,
+    random_shift,
+    with_surprises,
+    with_work_on_every_field,
+)
 from llm.assistant import answer_why, ask_tractor, copilot, scenario_from_text, shift_briefing, llm_provider, narrate_what_if, parse_jobs  # noqa: E402
 from scripts.benchmark import run_benchmark  # noqa: E402
 
@@ -245,14 +252,13 @@ def random_scenario_draft(seed: int | None = None, trouble: Literal["none", "low
 @app.post("/api/scenario/describe")
 async def describe_scenario(body: ScenarioTextIn) -> dict:
     scenario, source = await asyncio.to_thread(scenario_from_text, body.text, secrets.randbelow(100_000))
+    # What the operator asked for is kept: every field stays (an empty one gets a job), no job is dropped.
+    scenario, added = with_work_on_every_field(scenario)
     try:
-        scenario, changes = await asyncio.to_thread(make_feasible, scenario)
+        scenario, changes = await asyncio.to_thread(make_feasible, scenario, False)
     except ValueError as exc:
         raise HTTPException(422, str(exc)) from exc
-    dropped = len(scenario.fields) - len(without_empty_fields(scenario).fields)
-    if dropped:
-        changes = [*changes, f"{dropped} field{'s' if dropped != 1 else ''} with no job removed"]
-    return {"scenario": without_empty_fields(scenario).model_dump(mode="json"), "source": source, "changes": changes}
+    return {"scenario": scenario.model_dump(mode="json"), "source": source, "changes": [*describe_events(scenario), *added, *changes]}
 
 
 @app.post("/api/scenario/check")

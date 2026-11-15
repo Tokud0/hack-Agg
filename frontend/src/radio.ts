@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import { describeTrigger } from './labels'
-import type { AgentMessage, Explanation, LogEntry } from './types'
+import type { AgentMessage, Explanation, JobChange, LogEntry } from './types'
 
 /** A re-plan's whole conversation is spread over about this long, so a person can follow it. */
 const PLAYBACK_MS = 3500
@@ -9,6 +9,20 @@ const MAX_STEP_MS = 170
 /** How long the latest message stays on the map after it appears. */
 const SPEECH_MS = 2600
 
+/** The outcome of one re-plan, enough to summarise it without reading the conversation. */
+export interface ReplanDigest {
+  index: number
+  isInitial: boolean
+  isAccepted: boolean
+  changes: JobChange[]
+  /** What each working tractor confirmed it will do, in its own words. */
+  queues: { tractorId: string; text: string }[]
+  messageCount: number
+}
+
+/** Summary: one card per plan, nothing on the map. All: every message, in the feed and over the map. */
+export type RadioMode = 'summary' | 'all'
+
 export interface RadioItem {
   id: string
   time: number
@@ -16,7 +30,12 @@ export interface RadioItem {
   message?: AgentMessage
   title?: string
   note?: string
+  replan?: ReplanDigest
 }
+
+/** Ids of the items that belong to one re-plan: its messages and its explanation. */
+export const replanMessagePrefix = (index: number): string => `replan-${index}-`
+export const explainerId = (index: number | string): string => `explain-${index}`
 
 export interface Speech {
   id: string
@@ -41,9 +60,21 @@ function itemsOf(entry: LogEntry): RadioItem[] {
   }
   if (entry.kind !== 'replan' || !entry.data.messages?.length) return []
   const took = entry.data.duration_ms === undefined ? '' : `decided in ${entry.data.duration_ms.toFixed(1)} ms, `
+  const trigger = entry.data.diff?.trigger ?? {}
+  const isInitial = trigger.type === 'initial_plan'
+  const messages = entry.data.messages
+  const replan: ReplanDigest = {
+    index: entry.index,
+    isInitial,
+    isAccepted: entry.data.accepted ?? true,
+    changes: entry.data.diff?.changes ?? [],
+    queues: messages.filter((m) => m.kind === 'ack').map((m) => ({ tractorId: m.sender, text: m.text.replace(/^Confirmed\. /, '') })),
+    messageCount: messages.length,
+  }
+  const title = isInitial ? 'Opening plan' : `Re-plan: ${describeTrigger(trigger)}`
   return [
-    { id: `replan-${entry.index}`, time: entry.time, title: `Re-plan: ${describeTrigger(entry.data.diff?.trigger ?? {})}`, note: `${took}played back slowed down` },
-    ...entry.data.messages.map((message, i) => ({ id: `replan-${entry.index}-${i}`, time: entry.time, message })),
+    { id: `replan-${entry.index}`, time: entry.time, title, note: `${took}played back slowed down`, replan },
+    ...messages.map((message, i) => ({ id: `${replanMessagePrefix(entry.index)}${i}`, time: entry.time, message })),
   ]
 }
 
@@ -52,7 +83,7 @@ function explainerItem(index: string, time: number, explanation: Explanation): R
     sender: 'explainer', to: 'operator', kind: 'explain', phase: 'approval', topic: '', data: {},
     text: `${explanation.headline}. ${explanation.summary}`,
   }
-  return { id: `explain-${index}`, time, message }
+  return { id: explainerId(index), time, message }
 }
 
 interface Seen {
@@ -75,6 +106,8 @@ export function useAgentRadio(
   explanations: Record<string, Explanation> | undefined,
   now: number,
   sessionId: string | undefined,
+  /** Skip the pacing: show everything as soon as it exists (used when only summaries are on screen). */
+  isInstant: boolean,
 ): { items: RadioItem[]; backlog: number; speech: Speech | null } {
   const [feed, setFeed] = useState<RadioItem[]>([])
   const [shown, setShown] = useState(0)
@@ -119,19 +152,23 @@ export function useAgentRadio(
   const backlog = Math.max(0, feed.length - shown)
   useEffect(() => {
     if (backlog === 0) return
+    if (isInstant) {
+      setShown(feed.length)
+      return
+    }
     const step = Math.max(MIN_STEP_MS, Math.min(MAX_STEP_MS, PLAYBACK_MS / backlog))
     const timer = window.setTimeout(() => setShown((count) => count + 1), step)
     return () => window.clearTimeout(timer)
-  }, [backlog, shown])
+  }, [backlog, shown, isInstant, feed.length])
 
   // The newest revealed message is what the map shows as "speaking".
   const latest = feed[shown - 1]
   useEffect(() => {
-    if (!latest?.message) return
+    if (!latest?.message || isInstant) return
     setSpeech({ id: latest.id, message: latest.message })
     const timer = window.setTimeout(() => setSpeech(null), SPEECH_MS)
     return () => window.clearTimeout(timer)
-  }, [latest])
+  }, [latest, isInstant])
 
-  return { items: feed.slice(0, shown), backlog, speech }
+  return { items: feed.slice(0, shown), backlog, speech: isInstant ? null : speech }
 }

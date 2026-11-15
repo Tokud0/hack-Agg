@@ -12,6 +12,7 @@ from pathlib import Path
 from fleet import engine
 from fleet.engine import Run
 from fleet.scenario import EventIn, ScenarioIn, load_scenario
+from fleet.generate import SURPRISE
 from fleet.models import Job
 from fleet.replan import fault_test
 from fleet.whatif import forecast
@@ -42,7 +43,7 @@ class Session:
     @classmethod
     def create(cls, scenario: ScenarioIn | None = None) -> "Session":
         scenario = scenario or load_scenario(SCENARIO_PATH)
-        runs = {s: engine.start(scenario, s, with_demo_events=False, record_messages=True) for s in ("baseline", "edf", "coordinator")}
+        runs = {s: engine.start(scenario, s, with_demo_events=scenario.auto_events, record_messages=True) for s in ("baseline", "edf", "coordinator")}
         session = cls(scenario=scenario, runs=runs)
         session.schedule_explanations()
         return session
@@ -142,6 +143,7 @@ class Session:
     # --- views -------------------------------------------------------------
 
     def view(self) -> dict:
+        pending = self.runs["coordinator"].pending_events
         return {
             "running": self.running,
             "speed": self.speed,
@@ -150,8 +152,10 @@ class Session:
             "runs": {name: snapshot(run) for name, run in self.runs.items()},
             "explanations": {str(k): v for k, v in self.explanations.items()},
             "scheduled_faults": [
-                {"tractor_id": e.tractor_id, "at": e.at} for e in self.runs["coordinator"].pending_events
+                {"tractor_id": e.tractor_id, "at": e.at} for e in pending if e.source != SURPRISE
             ],
+            # How many generated events are still to come; what and when stays a surprise.
+            "surprises_left": sum(1 for e in pending if e.source == SURPRISE),
         }
 
     def map_view(self) -> dict:

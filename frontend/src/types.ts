@@ -149,6 +149,8 @@ export interface SessionView {
   explanations: Record<string, Explanation>
   /** Faults that will arrive by themselves on the simulation clock. */
   scheduled_faults: { tractor_id: string; at: number }[]
+  /** Generated events of a random shift that have not happened yet. */
+  surprises_left: number
 }
 
 export interface MapInfo {

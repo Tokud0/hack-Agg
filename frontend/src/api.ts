@@ -42,7 +42,12 @@ export const api = {
   currentScenario: () => request<Scenario>('/api/scenario'),
   randomScenario: () => request<Scenario>('/api/scenario/random'),
   describeScenario: (text: string) =>
-    request<{ scenario: Scenario; source: string }>('/api/scenario/describe', { method: 'POST', body: JSON.stringify({ text }) }),
+    request<{ scenario: Scenario; source: string; changes: string[] }>('/api/scenario/describe', { method: 'POST', body: JSON.stringify({ text }) }),
+  checkScenario: (scenario: Scenario) =>
+    request<{ impossible: Record<string, string>; fixed: Scenario | null; changes: string[] }>('/api/scenario/check', {
+      method: 'POST',
+      body: JSON.stringify(scenario),
+    }),
   uploadScenario: (scenario: unknown) =>
     request<{ ok: boolean; scenario: string; jobs: number }>('/api/scenario', { method: 'POST', body: JSON.stringify(scenario) }),
   askAgent: (tractorId: string, question: string, replanIndex: number) =>

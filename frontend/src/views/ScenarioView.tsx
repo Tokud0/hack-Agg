@@ -27,17 +27,20 @@ export function ScenarioView({ onStarted }: ScenarioViewProps) {
   const [selectedField, setSelectedField] = useState<string | null>(null)
   const [text, setText] = useState('')
   const [isBusy, setIsBusy] = useState(false)
-  const [note, setNote] = useState<{ ok: boolean; text: string; source?: string } | null>(null)
+  const [note, setNote] = useState<{ ok: boolean; text: string; source?: string; changes?: string[] } | null>(null)
+  // Jobs that cannot be done as the shift starts, found when the operator pressed Start.
+  const [check, setCheck] = useState<{ impossible: Record<string, string>; fixed: Scenario | null; changes: string[] } | null>(null)
 
   /** Run a request that yields a scenario and put the result into the editor. */
-  const load = async (fetchScenario: () => Promise<{ scenario: Scenario; source?: string }>, done: string) => {
+  const load = async (fetchScenario: () => Promise<{ scenario: Scenario; source?: string; changes?: string[] }>, done: string) => {
     setIsBusy(true)
     setNote(null)
     try {
-      const { scenario: next, source } = await fetchScenario()
+      const { scenario: next, source, changes } = await fetchScenario()
       setScenario(next)
       setSelectedField(null)
-      setNote({ ok: true, text: done, source })
+      setCheck(null)
+      setNote({ ok: true, text: done, source, changes })
     } catch (e) {
       setNote({ ok: false, text: errorText(e) })
     } finally {
@@ -50,10 +53,18 @@ export function ScenarioView({ onStarted }: ScenarioViewProps) {
     api.currentScenario().then(setScenario).catch((e: unknown) => setNote({ ok: false, text: errorText(e) }))
   }, [])
 
-  const start = async () => {
+  /** Start the shift. Unless told to skip it, first make sure every job can be done from the start. */
+  const start = async (target: Scenario, isChecked: boolean) => {
     setIsBusy(true)
     try {
-      await api.uploadScenario(scenario)
+      if (!isChecked) {
+        const result = await api.checkScenario(target)
+        if (Object.keys(result.impossible).length > 0) {
+          setCheck(result)
+          return
+        }
+      }
+      await api.uploadScenario(target)
       onStarted()
     } catch (e) {
       setNote({ ok: false, text: `The shift could not start: ${errorText(e)}` })
@@ -62,8 +73,11 @@ export function ScenarioView({ onStarted }: ScenarioViewProps) {
     }
   }
 
+  /** A manual change. Generated events may point at things that no longer exist, so they are dropped and made anew on start. */
+  const edit = (change: (s: Scenario) => Scenario) => setScenario((s) => ({ ...change(s), demo_events: [] }))
+
   const removeField = (id: string) => {
-    setScenario((s) => withoutField(s, id))
+    edit((s) => withoutField(s, id))
     setSelectedField(null)
   }
 
@@ -74,9 +88,9 @@ export function ScenarioView({ onStarted }: ScenarioViewProps) {
     <div className="flex h-full flex-col gap-3">
       <ViewHeader title="Scenario" description="Build your own shift: describe it, roll a random one, or place fields and jobs by hand."
         actions={<>
-          <button type="button" className={ghostButton} disabled={isBusy} onClick={() => load(async () => ({ scenario: await api.randomScenario() }), 'Random shift generated. Change anything, then start it.')}><ShuffleIcon size={14} />Random</button>
+          <button type="button" className={ghostButton} disabled={isBusy} onClick={() => load(async () => ({ scenario: await api.randomScenario() }), 'Random shift generated: every job can be done as it starts, and surprise events are armed. Change anything, then start it.')}><ShuffleIcon size={14} />Random</button>
           <button type="button" className={ghostButton} disabled={isBusy} onClick={() => { setScenario(EMPTY_SCENARIO); setSelectedField(null); setNote(null) }}><ResetIcon size={14} />Clear</button>
-          <button type="button" onClick={start} disabled={isBusy || blockers.length > 0}
+          <button type="button" onClick={() => start(scenario, false)} disabled={isBusy || blockers.length > 0}
             className="flex items-center gap-1.5 rounded-lg bg-leaf px-4 py-1.5 text-xs font-extrabold text-black hover:brightness-110 disabled:opacity-40"><PlayIcon size={13} />Start this shift</button>
         </>} />
 
@@ -94,7 +108,29 @@ export function ScenarioView({ onStarted }: ScenarioViewProps) {
             {note.text}{note.source && <SourceBadge source={note.source} />}
           </p>
         )}
+        {note?.changes && note.changes.length > 0 && (
+          <ul className="mt-1 space-y-0.5 text-[11.5px] text-wheat" aria-label="Adjustments made so every job can be done">
+            {note.changes.map((c) => <li key={c}>{c}</li>)}
+          </ul>
+        )}
       </section>
+
+      {check && (
+        <section role="alert" className="rounded-xl border border-wheat/40 bg-wheat/8 p-3 text-[12.5px]">
+          <div className="font-bold text-white">Some jobs cannot be done even if nothing goes wrong:</div>
+          <ul className="mt-1 space-y-0.5 text-white/75">
+            {Object.entries(check.impossible).map(([id, why]) => <li key={id}><b className="font-mono text-wheat">{id}</b> {why}</li>)}
+          </ul>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {check.fixed && (
+              <button type="button" disabled={isBusy} className="rounded-lg bg-leaf px-3 py-1.5 text-xs font-extrabold text-black hover:brightness-110 disabled:opacity-40"
+                onClick={() => { const fixed = check.fixed; if (fixed) { setScenario(fixed); setNote({ ok: true, text: 'Fixed so every job can be done:', changes: check.changes }); setCheck(null) } }}>Fix it for me</button>
+            )}
+            <button type="button" disabled={isBusy} className={ghostButton} onClick={() => { setCheck(null); void start(scenario, true) }}>Start anyway</button>
+            <button type="button" className={ghostButton} onClick={() => setCheck(null)}>Keep editing</button>
+          </div>
+        </section>
+      )}
 
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.05fr)]">
         <section className="panel flex min-h-[380px] flex-col p-3" aria-label="Field layout">
@@ -106,7 +142,7 @@ export function ScenarioView({ onStarted }: ScenarioViewProps) {
           </div>
           <div className="mt-2 min-h-0 flex-1">
             <ScenarioMap scenario={scenario} selectedField={selectedField} onSelectField={setSelectedField}
-              onAddField={(x, y) => setScenario((s) => withField(s, x, y))} onMoveField={(id, x, y) => setScenario((s) => movedField(s, id, x, y))} />
+              onAddField={(x, y) => edit((s) => withField(s, x, y))} onMoveField={(id, x, y) => edit((s) => movedField(s, id, x, y))} />
           </div>
         </section>
 
@@ -115,10 +151,15 @@ export function ScenarioView({ onStarted }: ScenarioViewProps) {
             <label htmlFor="scenario-name" className="text-xs font-bold uppercase tracking-widest text-white/60">Name</label>
             <input id="scenario-name" value={scenario.name} maxLength={60} onChange={(e) => setScenario((s) => ({ ...s, name: e.target.value }))} className={`${inputCls} mt-1 w-full`} />
           </div>
-          <TractorList tractors={scenario.tractors} onAdd={() => setScenario(withTractor)}
-            onUpdate={(id, patch) => setScenario((s) => updatedTractor(s, id, patch))} onRemove={(id) => setScenario((s) => withoutTractor(s, id))} />
-          <JobList scenario={scenario} selectedField={selectedField} onAdd={(fieldId) => setScenario((s) => withJob(s, fieldId))}
-            onUpdate={(id, patch) => setScenario((s) => updatedJob(s, id, patch))} onRemove={(id) => setScenario((s) => withoutJob(s, id))} />
+          <label className="flex items-start gap-2 rounded-lg bg-black/20 px-2.5 py-2 text-[12px] text-white/75">
+            <input type="checkbox" className="mt-0.5 accent-[#7bd88f]" checked={scenario.auto_events ?? false}
+              onChange={(e) => edit((s) => ({ ...s, auto_events: e.target.checked }))} />
+            <span><b className="text-white">Surprise events.</b> A breakdown, a closed road and a priority change happen by themselves at random moments. Nobody clicks; the fleet has to recover on its own.</span>
+          </label>
+          <TractorList tractors={scenario.tractors} onAdd={() => edit(withTractor)}
+            onUpdate={(id, patch) => edit((s) => updatedTractor(s, id, patch))} onRemove={(id) => edit((s) => withoutTractor(s, id))} />
+          <JobList scenario={scenario} selectedField={selectedField} onAdd={(fieldId) => edit((s) => withJob(s, fieldId))}
+            onUpdate={(id, patch) => edit((s) => updatedJob(s, id, patch))} onRemove={(id) => edit((s) => withoutJob(s, id))} />
           {(blockers.length > 0 || warnings.length > 0) && (
             <ul className="space-y-0.5 text-[12px]">
               {blockers.map((b) => <li key={b} className="text-alarm">{b}</li>)}

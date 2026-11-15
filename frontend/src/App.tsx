@@ -13,7 +13,7 @@ import { Copilot } from './components/tools/Copilot'
 import { EventsTool } from './components/tools/EventsTool'
 import { JobsTool } from './components/tools/JobsTool'
 import { useHashView } from './nav'
-import { useAgentRadio } from './radio'
+import { useAgentRadio, type RadioMode } from './radio'
 import type { BaselineKind } from './strategies'
 import type { LogEntry, MapInfo } from './types'
 import { CompareView } from './views/CompareView'
@@ -25,6 +25,17 @@ import { ScheduleView } from './views/ScheduleView'
 
 const HANDOFF_MS = 3500
 const FLASH_MS = 900
+
+const NAV_OPEN_KEY = 'fleet.navOpen'
+
+/** The menu stays the way the operator left it; storage may be unavailable (private window). */
+function readNavOpen(): boolean {
+  try {
+    return window.localStorage.getItem(NAV_OPEN_KEY) !== 'false'
+  } catch {
+    return true
+  }
+}
 
 function useLatest(log: LogEntry[] | undefined, kind: string): LogEntry | undefined {
   return useMemo(() => [...(log ?? [])].reverse().find((e) => e.kind === kind), [log, kind])
@@ -44,6 +55,8 @@ export default function App() {
   const [seenReplan, setSeenReplan] = useState<number | undefined>(undefined)
   const [baselineKind, setBaselineKind] = useState<BaselineKind>('baseline')
   const [error, setError] = useState<string | null>(null)
+  const [isNavOpen, setIsNavOpen] = useState(readNavOpen)
+  const [radioMode, setRadioMode] = useState<RadioMode>('summary')
 
   useEffect(() => {
     api.map().then(setMap).catch(() => setError('Backend not reachable on :8000'))
@@ -54,7 +67,7 @@ export default function App() {
   const base = session?.runs[baselineKind]
   const latest = useLatest(coord?.log, 'replan')
   const latestEvent = useLatest(coord?.log, 'event')
-  const radio = useAgentRadio(coord?.log, session?.explanations, coord?.time ?? 0, session?.session_id)
+  const radio = useAgentRadio(coord?.log, session?.explanations, coord?.time ?? 0, session?.session_id, radioMode === 'summary')
   const isInitialPlan = latest?.data.diff?.trigger.type === 'initial_plan'
 
   // React to each new re-plan: handoff arrows on the map, temporary highlight, and surface the explanation.
@@ -88,6 +101,15 @@ export default function App() {
       await fn()
     } catch (e) {
       setError(e instanceof Error ? e.message : 'Action failed')
+    }
+  }
+  const toggleNav = () => {
+    const next = !isNavOpen
+    setIsNavOpen(next)
+    try {
+      window.localStorage.setItem(NAV_OPEN_KEY, String(next))
+    } catch {
+      // Not being able to remember the choice is harmless.
     }
   }
   const breakdown = (id: string) => act(() => api.event({ type: 'breakdown', tractor_id: id }))
@@ -135,10 +157,12 @@ export default function App() {
         onTogglePlay={() => act(() => api.control(session.running ? 'pause' : 'play'))}
         onSpeed={(s) => act(() => api.control('speed', s))}
         onReset={() => act(() => api.control('reset'))}
-        onRandom={() => act(async () => api.uploadScenario(await api.randomScenario()))} />
+        onRandom={() => act(async () => api.uploadScenario(await api.randomScenario()))}
+        surprisesLeft={session.surprises_left ?? 0}
+        isNavOpen={isNavOpen} onToggleNav={toggleNav} />
 
       <div className="flex flex-1 flex-col xl:min-h-0 xl:flex-row">
-        <NavRail view={page} onNavigate={navigate} />
+        {isNavOpen && <NavRail view={page} onNavigate={navigate} />}
 
         <main className="flex min-w-0 flex-1 flex-col gap-3 p-3 xl:overflow-y-auto">
           {error && <div role="alert" className="rounded-lg border border-alarm/40 bg-alarm/10 px-3 py-1.5 text-sm text-alarm">{error}</div>}
@@ -160,7 +184,7 @@ export default function App() {
 
         <SideDock tab={dockTab} onTab={setDockTab} hasUnreadReplan={hasUnreadReplan}
           panels={{
-            radio: <RadioFeed items={radio.items} backlog={radio.backlog} />,
+            radio: <RadioFeed items={radio.items} backlog={radio.backlog} mode={radioMode} onMode={setRadioMode} />,
             replan: replanPanel,
             chat: <Copilot />,
             jobs: <JobsTool fields={map.fields.map((f) => f.id)} nowHours={coord.time} />,

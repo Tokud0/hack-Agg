@@ -15,7 +15,7 @@ const GUIDE = [
   'Press Run to start the shift',
   'Break a tractor on its card and watch the re-plan',
   'Click any field or job to see why it went there',
-  'Follow the agents talking on the map and in Radio on the right',
+  'Read each plan in Radio on the right; All messages shows the agents talking',
 ]
 
 function Guide({ onClose }: { onClose: () => void }) {

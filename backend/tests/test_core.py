@@ -6,6 +6,7 @@ import pytest
 from fleet.coordinator import plan
 from fleet.engine import apply_event, metrics, run_to_end, start, tick
 from fleet.feasibility import StartContext, evaluate_queue
+from fleet.generate import impossible_at_start, make_feasible, random_shift
 from fleet.invariants import check_plan
 from fleet.models import JobStatus, Plan, TractorStatus
 from fleet.replan import block_road, break_tractor, current_plan, fault_test, on_closed_stretch, replan, reroute_in_transit
@@ -441,3 +442,42 @@ def test_draft_is_clamped_and_overlapping_fields_are_moved_apart():
 def test_draft_with_nothing_usable_is_rejected():
     with pytest.raises(ValueError):
         scenario_from_draft(ScenarioDraft(name="x", tractors=[], fields=[], jobs=[]))
+
+
+# --- generated shifts: feasible at the start, then surprised ------------------
+
+
+@pytest.mark.parametrize("seed", range(30))
+def test_random_shift_can_be_finished_as_planned_at_the_start(seed):
+    assert impossible_at_start(random_shift(seed)) == {}
+
+
+@pytest.mark.parametrize("seed", range(30))
+def test_random_shift_survives_its_surprises_without_violations(seed):
+    scenario = random_shift(seed)
+    kinds = {e.type for e in scenario.demo_events}
+    assert scenario.auto_events and "change_priority" in kinds and all(e.source == "surprise" for e in scenario.demo_events)
+    run = run_to_end(start(scenario, "coordinator"))
+    assert not run.pending_events and metrics(run)["invariant_violations"] == 0
+    assert all(t.status != TractorStatus.BROKEN for t in run.world.tractors.values()) is ("breakdown" not in kinds)
+
+
+def test_make_feasible_moves_an_impossible_deadline_and_says_so(scenario):
+    tight = scenario.model_copy(update={"jobs": [j.model_copy(update={"deadline": 0.5}) if j.id == "J05" else j for j in scenario.jobs]})
+    assert "J05" in impossible_at_start(tight)
+    fixed, changes = make_feasible(tight)
+    assert impossible_at_start(fixed) == {}
+    assert any(c.startswith("J05: deadline moved from 06:30") for c in changes)
+
+
+def test_make_feasible_removes_a_job_no_tractor_can_do(scenario):
+    sprayers_only = scenario.model_copy(update={"tractors": [t for t in scenario.tractors if t.implement.value == "sprayer"]})
+    fixed, changes = make_feasible(sprayers_only)
+    assert all(j.type == "spray" for j in fixed.jobs)
+    assert any("removed: no tractor has a mower" in c for c in changes)
+
+
+def test_priority_change_on_finished_work_is_ignored(scenario):
+    run = run_to_end(start(scenario, "coordinator", with_demo_events=False))
+    done = next(j.id for j in run.world.jobs.values() if j.status == JobStatus.DONE)
+    assert apply_event(run, EventIn(at=run.world.time, type="change_priority", job_id=done, priority=1)) is run

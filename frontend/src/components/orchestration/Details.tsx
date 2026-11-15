@@ -57,7 +57,7 @@ function Owner({ id }: { id: string }) {
   return <span className={id === 'unassignable' ? 'text-alarm' : 'text-white/45'}>{id === 'unassignable' ? 'not doable' : 'not planned'}</span>
 }
 
-function ChangeRow({ change }: { change: JobChange }) {
+export function ChangeRow({ change }: { change: JobChange }) {
   return (
     <li className="border-t border-white/5 py-1.5 text-[12.5px]">
       <div className="flex items-center gap-2">

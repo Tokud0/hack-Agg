@@ -195,3 +195,44 @@ def test_describing_a_scenario_offline_reads_the_counts(client):
 
 def test_invalid_scenario_is_rejected(client):
     assert client.post("/api/scenario", json={"name": "x", "depot": {"x": 5, "y": 0}, "tractors": [], "fields": [], "jobs": []}).status_code == 422
+
+
+def test_random_shift_arms_surprises_that_fire_without_a_click(client):
+    scenario = client.get("/api/scenario/random", params={"seed": 3}).json()
+    assert scenario["auto_events"] and scenario["demo_events"]
+    client.post("/api/scenario", json=scenario)
+    state = client.get("/api/state").json()
+    assert state["surprises_left"] == len(scenario["demo_events"]) and state["scheduled_faults"] == []
+
+    from api.main import session
+    session().running, session().speed = True, 8.0
+    for _ in range(80):  # 8 real seconds at 8x = 9.6 simulated hours
+        session().advance(0.1)
+    state = client.get("/api/state").json()
+    replans = [e for e in state["runs"]["coordinator"]["log"] if e["kind"] == "replan"]
+    assert state["surprises_left"] == 0
+    assert {r["data"]["diff"]["trigger"].get("source") for r in replans[1:]} == {"surprise"}
+    assert all(r["data"]["invariants"]["violations"] == [] for r in replans)
+
+
+def test_check_reports_impossible_jobs_and_offers_a_fix(client):
+    scenario = client.get("/api/scenario/random", params={"seed": 4}).json()
+    assert client.post("/api/scenario/check", json=scenario).json()["impossible"] == {}
+    scenario["jobs"][0]["deadline"] = 0.3
+    body = client.post("/api/scenario/check", json=scenario).json()
+    job_id = scenario["jobs"][0]["id"]
+    assert job_id in body["impossible"] and body["fixed"] and any(c.startswith(job_id) for c in body["changes"])
+
+
+def test_uploaded_scenario_can_ask_for_generated_surprises(client):
+    scenario = client.get("/api/scenario/random", params={"seed": 6}).json()
+    client.post("/api/scenario", json={**scenario, "demo_events": [], "auto_events": True})
+    assert client.get("/api/state").json()["surprises_left"] >= 2
+    client.post("/api/scenario", json={**scenario, "auto_events": False})
+    assert client.get("/api/state").json()["surprises_left"] == 0
+
+
+def test_scenario_with_an_event_for_a_missing_tractor_is_rejected(client):
+    scenario = client.get("/api/scenario/random", params={"seed": 8}).json()
+    scenario["demo_events"] = [{"at": 1.0, "type": "breakdown", "tractor_id": "T9"}]
+    assert client.post("/api/scenario", json=scenario).status_code == 422

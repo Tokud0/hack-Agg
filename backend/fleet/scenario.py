@@ -52,7 +52,8 @@ class EventIn(BaseModel):
     job_id: str | None = None
     priority: int | None = None
     # Who raised it: "operator" (button), "copilot" (LLM proposal the operator confirmed)
-    # or "telemetry" (the tractor reported the fault itself; nobody clicked).
+    # "telemetry" (a scheduled fault the tractor reports itself) or "surprise" (a generated
+    # event of a random shift). Nobody clicks for the last two.
     source: str | None = None
 
 
@@ -66,6 +67,8 @@ class ScenarioIn(BaseModel):
     fields: list[FieldIn] = PField(min_length=1)
     jobs: list[JobIn] = PField(min_length=1)
     demo_events: list[EventIn] = []
+    # Live dashboard only: fire `demo_events` by themselves on the clock (generated ones if none are given).
+    auto_events: bool = False
 
     @model_validator(mode="after")
     def _check_refs(self) -> "ScenarioIn":
@@ -77,6 +80,16 @@ class ScenarioIn(BaseModel):
             names = [x.id for x in ids]
             if len(names) != len(set(names)):
                 raise ValueError(f"duplicate {kind} ids")
+        tractor_ids = {t.id for t in self.tractors}
+        job_ids = {j.id for j in self.jobs}
+        nodes = field_ids | {self.depot.id}
+        for event in self.demo_events:  # an event fires long after loading; a bad reference must fail here
+            if event.type == "breakdown" and event.tractor_id not in tractor_ids:
+                raise ValueError(f"event references unknown tractor {event.tractor_id}")
+            if event.type == "block_road" and (event.a not in nodes or event.b not in nodes or event.a == event.b):
+                raise ValueError(f"event references unknown road {event.a}–{event.b}")
+            if event.type == "change_priority" and (event.job_id not in job_ids or event.priority not in (1, 2, 3)):
+                raise ValueError(f"event references unknown job {event.job_id} or a bad priority")
         return self
 
 

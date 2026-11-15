@@ -135,6 +135,8 @@ def apply_event(run: Run, event: EventIn) -> Run:
         )
         trigger = {**trigger, "caught_on_road": caught}
     elif event.type == "change_priority" and event.job_id and event.priority:
+        if world.jobs[event.job_id].status == JobStatus.DONE:  # too late to matter; finished work is never touched
+            return run
         world = change_priority(world, event.job_id, event.priority)
         message = f"{event.job_id} priority set to P{event.priority}"
     else:

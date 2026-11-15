@@ -20,7 +20,7 @@ load_dotenv()
 from fleet.engine import log_as_dicts, metrics  # noqa: E402
 from fleet.scenario import EventIn, ScenarioIn  # noqa: E402
 from fleet.why import explain_assignment  # noqa: E402
-from fleet.scenario import random_live_scenario  # noqa: E402
+from fleet.generate import impossible_at_start, make_feasible, random_shift, with_surprises  # noqa: E402
 from llm.assistant import answer_why, ask_tractor, copilot, scenario_from_text, llm_provider, narrate_what_if, parse_jobs  # noqa: E402
 from scripts.benchmark import run_benchmark  # noqa: E402
 
@@ -233,17 +233,36 @@ def current_scenario() -> dict:
 @app.get("/api/scenario/random")
 def random_scenario_draft(seed: int | None = None) -> dict:
     """A generated scenario to look at or edit. Nothing starts until it is posted to /api/scenario."""
-    return random_live_scenario(seed if seed is not None else secrets.randbelow(100_000)).model_dump(mode="json")
+    return random_shift(seed if seed is not None else secrets.randbelow(100_000)).model_dump(mode="json")
 
 
 @app.post("/api/scenario/describe")
 async def describe_scenario(body: ScenarioTextIn) -> dict:
     scenario, source = await asyncio.to_thread(scenario_from_text, body.text, secrets.randbelow(100_000))
-    return {"scenario": scenario.model_dump(mode="json"), "source": source}
+    try:
+        scenario, changes = await asyncio.to_thread(make_feasible, scenario)
+    except ValueError as exc:
+        raise HTTPException(422, str(exc)) from exc
+    return {"scenario": scenario.model_dump(mode="json"), "source": source, "changes": changes}
+
+
+@app.post("/api/scenario/check")
+async def check_scenario(body: ScenarioIn) -> dict:
+    """Can every job be done as the shift starts? If not, also offer a version where it can."""
+    impossible = await asyncio.to_thread(impossible_at_start, body)
+    if not impossible:
+        return {"impossible": {}, "fixed": None, "changes": []}
+    try:
+        fixed, changes = await asyncio.to_thread(make_feasible, body)
+    except ValueError:
+        return {"impossible": impossible, "fixed": None, "changes": []}
+    return {"impossible": impossible, "fixed": fixed.model_dump(mode="json"), "changes": changes}
 
 
 @app.post("/api/scenario")
 async def load_scenario_json(body: ScenarioIn) -> dict:
+    if body.auto_events and not body.demo_events:
+        body = with_surprises(body, secrets.randbelow(100_000))
     async with session().lock:
         state["session"] = reset_runs(session(), body)
     return {"ok": True, "scenario": body.name, "jobs": len(body.jobs)}

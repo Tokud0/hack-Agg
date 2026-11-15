@@ -1,5 +1,5 @@
 import { AnimatePresence, motion } from 'framer-motion'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { agentColor, agentName, EVERYONE } from '../agents'
 import type { Speech } from '../radio'
 import type { Job, MapInfo, RunSnapshot, Tractor } from '../types'
@@ -38,11 +38,6 @@ function nodePos(map: MapInfo, id: string): Point {
   return f ? { x: f.x, y: f.y } : { x: 0, y: 0 }
 }
 
-function fieldProgress(jobs: Job[]): number {
-  const total = jobs.reduce((s, j) => s + j.work_hours, 0)
-  return total ? jobs.reduce((s, j) => s + j.progress * j.work_hours, 0) / total : 0
-}
-
 /* Tiny vector glyphs drawn in map units (no emoji). */
 function DropGlyph({ x, y, color }: { x: number; y: number; color: string }) {
   return <path d={`M${x},${y - 0.16} q0.13,0.16 0.13,0.24 a0.13,0.13 0 0 1 -0.26,0 q0,-0.08 0.13,-0.24z`} fill={color} />
@@ -54,16 +49,34 @@ function GrassGlyph({ x, y, color }: { x: number; y: number; color: string }) {
   )
 }
 
-function FieldTile({ id, x, y, jobs, highlighted, onSelect }: {
-  id: string; x: number; y: number; jobs: Job[]; highlighted: boolean; onSelect?: (jobId: string) => void
-}) {
-  const progress = fieldProgress(jobs)
-  const allDone = jobs.length > 0 && jobs.every((j) => j.status === 'done')
-  const dropped = jobs.some((j) => j.status === 'unassignable')
-  const active = jobs.find((j) => j.status === 'in_progress')
+const MARK = 0.13
+
+/** A tick for finished work, a cross for work that will not get done; drawn in map units. */
+function OutcomeMark({ x, y, isDone }: { x: number; y: number; isDone: boolean }) {
+  const d = isDone
+    ? `M${x - MARK},${y} l${MARK * 0.7},${MARK * 0.8} l${MARK * 1.3},-${MARK * 1.6}`
+    : `M${x - MARK},${y - MARK} l${MARK * 2},${MARK * 2} M${x + MARK},${y - MARK} l-${MARK * 2},${MARK * 2}`
+  return <path d={d} fill="none" stroke={isDone ? '#eafff0' : '#ff5d5d'} strokeWidth={0.07} strokeLinecap="round" strokeLinejoin="round" />
+}
+
+interface FieldTileProps {
+  /** Unique per map, so two maps on one page never share SVG ids. */
+  uid: string
+  id: string
+  x: number
+  y: number
+  jobs: Job[]
+  highlighted: boolean
+  onSelect?: (jobId: string) => void
+}
+
+/** One field. Each job on it has its own strip that fills as that job is worked, so a field with two jobs can be half done. */
+function FieldTile({ uid, id, x, y, jobs, highlighted, onSelect }: FieldTileProps) {
   const half = FIELD_SIZE / 2
   const left = x - half
   const top = sy(y) - half
+  const strip = FIELD_SIZE / Math.max(1, jobs.length)
+  const isLost = jobs.length > 0 && jobs.every((j) => j.status === 'unassignable')
   return (
     <g className="cursor-pointer" onClick={() => jobs[0] && onSelect?.(jobs[0].id)}>
       {highlighted && (
@@ -71,26 +84,40 @@ function FieldTile({ id, x, y, jobs, highlighted, onSelect }: {
           fill="none" stroke="#f2c46d" strokeWidth={0.08}
           initial={{ opacity: 0 }} animate={{ opacity: [0.2, 1, 0.2] }} transition={{ repeat: Infinity, duration: 1.4 }} />
       )}
-      <rect x={left} y={top} width={FIELD_SIZE} height={FIELD_SIZE} rx={0.25}
-        fill={allDone ? '#254a30' : '#1b2a20'} stroke={dropped ? '#ff5d5d' : '#3a5243'}
-        strokeWidth={dropped ? 0.07 : 0.04} strokeDasharray={dropped ? '0.15 0.1' : undefined} />
-      <clipPath id={`clip-${id}`}>
-        <rect x={left} y={top} width={FIELD_SIZE * progress} height={FIELD_SIZE} rx={0.25} />
-      </clipPath>
-      <rect x={left} y={top} width={FIELD_SIZE} height={FIELD_SIZE} rx={0.25}
-        fill={`url(#stripes-${active ? active.tractor_id : 'done'})`} clipPath={`url(#clip-${id})`} />
-      <text x={left + 0.12} y={top + 0.36} fontSize={0.3} fill="#cfe0d4" fontWeight={700}>{id}</text>
+      <clipPath id={`${uid}-tile-${id}`}><rect x={left} y={top} width={FIELD_SIZE} height={FIELD_SIZE} rx={0.25} /></clipPath>
+      <rect x={left} y={top} width={FIELD_SIZE} height={FIELD_SIZE} rx={0.25} fill="#1b2a20" />
+      <g clipPath={`url(#${uid}-tile-${id})`}>
+        {jobs.map((j, i) => {
+          const x0 = left + i * strip
+          const isMissed = j.status === 'unassignable'
+          const pattern = j.status === 'in_progress' && j.tractor_id ? j.tractor_id : 'done'
+          return (
+            <g key={j.id}>
+              {isMissed && <rect x={x0} y={top} width={strip} height={FIELD_SIZE} fill="#ff5d5d1f" />}
+              <rect x={x0} y={top} width={strip * j.progress} height={FIELD_SIZE} fill={`url(#${uid}-stripes-${pattern})`}
+                opacity={isMissed ? 0.45 : 1} style={{ transition: 'width 140ms linear' }} />
+              {i > 0 && <line x1={x0} y1={top} x2={x0} y2={top + FIELD_SIZE} stroke="#0a100c" strokeWidth={0.05} />}
+            </g>
+          )
+        })}
+      </g>
+      <rect x={left} y={top} width={FIELD_SIZE} height={FIELD_SIZE} rx={0.25} fill="none" stroke={isLost ? '#ff5d5d' : '#3a5243'}
+        strokeWidth={isLost ? 0.07 : 0.04} strokeDasharray={isLost ? '0.15 0.1' : undefined} />
+      <text x={left + 0.1} y={top + 0.32} fontSize={0.27} fill="#cfe0d4" fontWeight={700}>{id}</text>
       {jobs.map((j, i) => {
-        const gx = x + half - 0.22 - i * 0.32
-        const color = j.status === 'done' ? '#7bd88f' : j.status === 'unassignable' ? '#ff5d5d' : '#9fc4ff'
-        return j.type === 'mow'
-          ? <GrassGlyph key={j.id} x={gx} y={top + 0.26} color={color} />
-          : <DropGlyph key={j.id} x={gx} y={top + 0.28} color={color} />
+        const cx = left + i * strip + strip / 2
+        const isDone = j.status === 'done'
+        const isMissed = j.status === 'unassignable'
+        const color = isDone ? '#eafff0' : isMissed ? '#ff8a8a' : '#9fc4ff'
+        const gx = left + (i + 1) * strip - 0.2
+        return (
+          <g key={j.id}>
+            {j.type === 'mow' ? <GrassGlyph x={gx} y={top + 0.24} color={color} /> : <DropGlyph x={gx} y={top + 0.26} color={color} />}
+            {(isDone || isMissed) && <OutcomeMark x={cx} y={sy(y) + 0.02} isDone={isDone} />}
+            <text x={cx} y={top + FIELD_SIZE - 0.14} fontSize={0.23} fill={color} textAnchor="middle" fontFamily="JetBrains Mono" fontWeight={isMissed ? 700 : 400}>{j.id}</text>
+          </g>
+        )
       })}
-      <text x={x} y={sy(y) + half - 0.15} fontSize={0.24} fill="#9fb3a5" textAnchor="middle" fontFamily="JetBrains Mono">
-        {jobs.map((j) => j.id).join(' ')}
-      </text>
-      {dropped && <text x={x} y={sy(y) + 0.08} fontSize={0.22} fill="#ff8a8a" textAnchor="middle" fontWeight={700}>NO TRACTOR</text>}
     </g>
   )
 }
@@ -209,6 +236,8 @@ const toPath = (pts: Point[]) => pts.map((p, i) => `${i ? 'L' : 'M'}${p.x},${sy(
 
 export function FieldMap({ run, map, highlight, handoffs = [], onSelectJob, speech }: FieldMapProps) {
   const [hovered, setHovered] = useState<string | null>(null)
+  // Two maps can be on one page (Compare); their SVG ids must not collide, or one map draws with the other's shapes.
+  const uid = `map${useId().replace(/[^a-zA-Z0-9]/g, '')}`
   const jobsByField = new Map<string, Job[]>()
   for (const j of run.jobs) jobsByField.set(j.field_id, [...(jobsByField.get(j.field_id) ?? []), j])
   const tractorsById = new Map(run.tractors.map((t) => [t.id, t]))
@@ -219,21 +248,21 @@ export function FieldMap({ run, map, highlight, handoffs = [], onSelectJob, spee
       <svg viewBox={`${VIEW.x} ${VIEW.y} ${VIEW.w} ${VIEW.h}`} className="h-full w-full select-none">
         <defs>
           {['done', ...run.tractors.map((t) => t.id)].map((id) => (
-            <pattern key={id} id={`stripes-${id}`} width={0.3} height={0.3} patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
+            <pattern key={id} id={`${uid}-stripes-${id}`} width={0.3} height={0.3} patternUnits="userSpaceOnUse" patternTransform="rotate(35)">
               <rect width={0.3} height={0.3} fill={id === 'done' ? '#2f6b3f' : `${tractorColor(id)}55`} />
               <rect width={0.14} height={0.3} fill={id === 'done' ? '#7bd88f' : tractorColor(id)} opacity={0.75} />
             </pattern>
           ))}
-          <marker id="arrow" viewBox="0 0 10 10" refX={8} refY={5} markerWidth={4} markerHeight={4} orient="auto-start-reverse">
+          <marker id={`${uid}-arrow`} viewBox="0 0 10 10" refX={8} refY={5} markerWidth={4} markerHeight={4} orient="auto-start-reverse">
             <path d="M0,0 L10,5 L0,10 z" fill="#f2c46d" />
           </marker>
-          <radialGradient id="soil-glow" cx="50%" cy="45%" r="65%">
+          <radialGradient id={`${uid}-soil-glow`} cx="50%" cy="45%" r="65%">
             <stop offset="0%" stopColor="#1d2c22" />
             <stop offset="100%" stopColor="#0f1712" />
           </radialGradient>
         </defs>
 
-        <rect x={-0.5} y={-0.5} width={GRID + 1} height={GRID + 1} rx={0.4} fill="url(#soil-glow)" />
+        <rect x={-0.5} y={-0.5} width={GRID + 1} height={GRID + 1} rx={0.4} fill={`url(#${uid}-soil-glow)`} />
         {Array.from({ length: GRID + 1 }, (_, i) => (
           <g key={i} stroke="#ffffff08" strokeWidth={0.02}>
             <line x1={i} y1={0} x2={i} y2={GRID} />
@@ -256,7 +285,7 @@ export function FieldMap({ run, map, highlight, handoffs = [], onSelectJob, spee
         })}
 
         {map.fields.map((f) => (
-          <FieldTile key={f.id} id={f.id} x={f.x} y={f.y} jobs={jobsByField.get(f.id) ?? []}
+          <FieldTile key={f.id} uid={uid} id={f.id} x={f.x} y={f.y} jobs={jobsByField.get(f.id) ?? []}
             highlighted={(jobsByField.get(f.id) ?? []).some((j) => highlight?.has(j.id))} onSelect={onSelectJob} />
         ))}
 
@@ -283,7 +312,7 @@ export function FieldMap({ run, map, highlight, handoffs = [], onSelectJob, spee
             const cy = (y1 + y2) / 2 + (x2 - x1) * 0.35
             return (
               <motion.path key={h.key} d={`M${x1},${y1} Q${cx},${cy} ${x2},${y2}`} fill="none" stroke="#f2c46d"
-                strokeWidth={0.1} markerEnd="url(#arrow)"
+                strokeWidth={0.1} markerEnd={`url(#${uid}-arrow)`}
                 initial={{ pathLength: 0, opacity: 1 }} animate={{ pathLength: 1, opacity: 1 }} exit={{ opacity: 0 }}
                 transition={{ duration: 0.9, ease: 'easeInOut' }} />
             )
@@ -304,8 +333,9 @@ export function MapLegend() {
     <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10.5px] text-white/50">
       <span className={item}><svg width="22" height="6"><line x1="0" y1="3" x2="22" y2="3" stroke="#c792ea" strokeWidth="2" strokeDasharray="4 3" /></svg>planned route</span>
       <span className={item}><svg width="12" height="12"><circle cx="6" cy="6" r="4.5" fill="none" stroke="#7bd88f" strokeWidth="2" strokeDasharray="20 9" /></svg>fuel left</span>
-      <span className={item}><span className="h-2.5 w-3.5 rounded-sm" style={{ background: 'repeating-linear-gradient(35deg,#7bd88f 0 3px,#2f6b3f 3px 6px)' }} />work done</span>
-      <span className={item}><span className="h-2.5 w-3.5 rounded-sm border border-dashed border-alarm" />no tractor can do it</span>
+      <span className={item}><span className="h-2.5 w-3.5 rounded-sm" style={{ background: 'repeating-linear-gradient(35deg,#7bd88f 0 3px,#2f6b3f 3px 6px)' }} />work in progress or done</span>
+      <span className={item}><svg width="11" height="11" viewBox="0 0 11 11"><path d="M2 5.5l2.5 3 4.5-6" fill="none" stroke="#eafff0" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" /></svg>job done</span>
+      <span className={item}><svg width="11" height="11" viewBox="0 0 11 11"><path d="M2 2l7 7M9 2l-7 7" fill="none" stroke="#ff5d5d" strokeWidth="1.8" strokeLinecap="round" /></svg>job not done (deadline missed or no tractor)</span>
       <span className={item}><span className="h-2.5 w-2.5 rounded-full bg-alarm" />broken down</span>
       <span className={item}><span className="h-2.5 w-2.5 rounded-sm bg-wheat" />refuelling at depot</span>
     </div>

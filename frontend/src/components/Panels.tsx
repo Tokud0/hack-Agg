@@ -60,18 +60,18 @@ export function Counters({ metrics, accent, compareTo }: CountersProps) {
     // A per-job figure means nothing until both sides have finished a job.
     delta: compareTo && !(c.key === 'travel_per_job' && (metrics.jobs_completed === 0 || compareTo.jobs_completed === 0))
       ? metrics[c.key] - compareTo[c.key] : 0,
-    note: c.key === 'travel_per_job' ? `${metrics.travel_hours.toFixed(1)} h total` : '',
+    note: c.key === 'travel_per_job' ? `of ${metrics.travel_hours.toFixed(1)} h` : '',
   }))
   return (
     <div className="grid grid-cols-4 gap-2">
       {items.map((it) => (
         <div key={it.label} className="rounded-lg bg-black/25 px-2.5 py-1.5">
-          <div className="text-[10px] uppercase tracking-wider text-white/45">{it.label}</div>
-          <div className="font-mono text-lg font-bold" style={{ color: accent }}>
+          <div className="truncate text-[10px] uppercase tracking-wider text-white/45" title={it.label}>{it.label}</div>
+          <div className="flex flex-wrap items-baseline font-mono text-lg font-bold" style={{ color: accent }}>
             <AnimatedNumber value={it.value} decimals={it.decimals} />
             <span className="text-xs text-white/40">{it.suffix}</span>
             {compareTo && <Delta value={it.delta} decimals={it.decimals} higherIsBetter={it.higherIsBetter} />}
-            {it.note && <span className="ml-1.5 font-sans text-[10px] font-normal text-white/40">{it.note}</span>}
+            {it.note && <span className="ml-1.5 whitespace-nowrap font-sans text-[10px] font-normal text-white/40">{it.note}</span>}
           </div>
         </div>
       ))}

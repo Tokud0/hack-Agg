@@ -3,6 +3,7 @@ import { useState } from 'react'
 import { FieldMap, MapLegend, type Handoff } from '../components/FieldMap'
 import { FleetStrip } from '../components/FleetStrip'
 import { CloseIcon } from '../components/Icons'
+import { JobChips, JobChipsLegend } from '../components/JobChips'
 import { Counters } from '../components/Panels'
 import { ViewHeader } from '../components/shell/ViewHeader'
 import type { Speech } from '../radio'
@@ -54,12 +55,13 @@ export function LiveView({ run, map, baselineKind, baselineMetrics, highlight, h
         actions={<span className="text-[11px] text-white/40">green / red badges: difference vs {BASELINES[baselineKind].label}</span>} />
       <AnimatePresence>{showGuide && <Guide onClose={() => setShowGuide(false)} />}</AnimatePresence>
       <Counters metrics={run.metrics} accent={COORDINATOR_ACCENT} compareTo={baselineMetrics} />
+      <JobChips jobs={run.jobs} onSelectJob={onSelectJob} />
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section className="panel flex min-h-[420px] flex-col p-3" aria-label="Field map">
           <div className="min-h-0 flex-1">
             <FieldMap run={run} map={map} highlight={highlight} handoffs={handoffs} onSelectJob={onSelectJob} speech={speech} />
           </div>
-          <div className="mt-2"><MapLegend /></div>
+          <div className="mt-2 flex flex-col gap-1"><JobChipsLegend /><MapLegend /></div>
         </section>
         <section className="flex min-h-0 flex-col" aria-label="Fleet status">
           <h2 className="mb-2 px-1 text-xs font-bold uppercase tracking-widest text-white/60">Fleet · one agent per tractor</h2>

@@ -1,5 +1,7 @@
 import { AnimatePresence, motion } from 'framer-motion'
 import { useState } from 'react'
+import { agentColor, agentName, EVERYONE } from '../agents'
+import type { Speech } from '../radio'
 import type { Job, MapInfo, RunSnapshot, Tractor } from '../types'
 import { clock, tractorColor } from '../theme'
 
@@ -23,6 +25,8 @@ interface FieldMapProps {
   highlight?: Set<string>
   handoffs?: Handoff[]
   onSelectJob?: (jobId: string) => void
+  /** The agent message being said right now, drawn over the map. */
+  speech?: Speech | null
 }
 
 type Point = { x: number; y: number }
@@ -157,9 +161,53 @@ function plannedRoute(t: Tractor, run: RunSnapshot, map: MapInfo): Point[] {
   return points
 }
 
+const SPEECH_MAX_CHARS = 52
+const SPEECH_CHAR_W = 0.125
+const SPEECH_H = 0.92
+
+/** Where an agent "is": a tractor agent rides its tractor, the other agents sit at the depot. */
+function agentPoint(id: string, run: RunSnapshot, map: MapInfo): Point {
+  const tractor = run.tractors.find((t) => t.id === id)
+  return tractor ? { x: tractor.x, y: tractor.y } : { x: map.depot.x, y: map.depot.y }
+}
+
+function SpeechLayer({ speech, run, map }: { speech: Speech; run: RunSnapshot; map: MapInfo }) {
+  const { sender, to, text } = speech.message
+  const color = agentColor(sender)
+  const from = agentPoint(sender, run, map)
+  const listeners = to === EVERYONE
+    ? run.tractors.filter((t) => t.id !== sender && t.status !== 'broken').map((t) => t.id)
+    : to === 'operator' ? [] : [to]
+  const line = text.length > SPEECH_MAX_CHARS ? `${text.slice(0, SPEECH_MAX_CHARS - 1)}…` : text
+  const header = `${agentName(sender)} → ${agentName(to)}`
+  const width = Math.max(line.length, header.length) * SPEECH_CHAR_W + 0.45
+  const left = Math.min(Math.max(from.x - width / 2, VIEW.x + 0.1), VIEW.x + VIEW.w - width - 0.1)
+  const above = sy(from.y) - 0.75 - SPEECH_H
+  const top = above < VIEW.y + 0.05 ? sy(from.y) + 0.75 : above
+  return (
+    <g pointerEvents="none">
+      {listeners.map((id) => {
+        const target = agentPoint(id, run, map)
+        return (
+          <motion.line key={`${speech.id}-${id}`} x1={from.x} y1={sy(from.y)} x2={target.x} y2={sy(target.y)}
+            stroke={color} strokeWidth={0.05} strokeLinecap="round"
+            initial={{ pathLength: 0, opacity: 1 }} animate={{ pathLength: 1, opacity: 0.55 }} transition={{ duration: 0.35 }} />
+        )
+      })}
+      <motion.circle key={`ring-${speech.id}`} cx={from.x} cy={sy(from.y)} fill="none" stroke={color} strokeWidth={0.06}
+        initial={{ r: 0.45, opacity: 0.9 }} animate={{ r: 0.95, opacity: 0 }} transition={{ duration: 0.7 }} />
+      <motion.g key={`bubble-${speech.id}`} initial={{ opacity: 0 }} animate={{ opacity: 1 }} transition={{ duration: 0.12 }}>
+        <rect x={left} y={top} width={width} height={SPEECH_H} rx={0.18} fill="#0a100cf2" stroke={color} strokeWidth={0.035} />
+        <text x={left + 0.2} y={top + 0.34} fontSize={0.2} fontWeight={700} fill={color}>{header}</text>
+        <text x={left + 0.2} y={top + 0.7} fontSize={0.235} fill="#e6efe8">{line}</text>
+      </motion.g>
+    </g>
+  )
+}
+
 const toPath = (pts: Point[]) => pts.map((p, i) => `${i ? 'L' : 'M'}${p.x},${sy(p.y)}`).join(' ')
 
-export function FieldMap({ run, map, highlight, handoffs = [], onSelectJob }: FieldMapProps) {
+export function FieldMap({ run, map, highlight, handoffs = [], onSelectJob, speech }: FieldMapProps) {
   const [hovered, setHovered] = useState<string | null>(null)
   const jobsByField = new Map<string, Job[]>()
   for (const j of run.jobs) jobsByField.set(j.field_id, [...(jobsByField.get(j.field_id) ?? []), j])
@@ -243,6 +291,7 @@ export function FieldMap({ run, map, highlight, handoffs = [], onSelectJob }: Fi
         </AnimatePresence>
 
         {run.tractors.map((t) => <TractorMarker key={t.id} t={t} onHover={setHovered} />)}
+        {speech && <SpeechLayer speech={speech} run={run} map={map} />}
       </svg>
       <AnimatePresence>{hoveredTractor && <TractorTooltip key={hoveredTractor.id} t={hoveredTractor} run={run} />}</AnimatePresence>
     </div>

@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import math
 import random
 from pathlib import Path
 from typing import Literal
@@ -150,3 +151,110 @@ def random_scenario(seed: int, n_fields: int = 8, n_jobs: int = 10) -> ScenarioI
         jobs=jobs,
         demo_events=[breakdown],
     )
+
+
+# --- scenarios for the live dashboard: random and operator-built --------------
+
+GRID_MAX = 10
+MAX_TRACTORS = 4
+MAX_FIELDS = 10
+MAX_JOBS = 14
+SHIFT_HOURS = 12.0
+DEFAULT_SPEED = 4.0
+DEFAULT_TRAVEL_BURN = 5.0
+DEFAULT_WORK_BURN = 8.0
+DEPOT = DepotIn(x=5, y=0)
+# Field tiles are 1.5 wide on the map, so fields sit on a coarse lattice to stay apart.
+FIELD_SLOTS = tuple((x, y) for x in (1, 3, 5, 7, 9) for y in (2, 4, 6, 8, 10))
+
+
+class TractorDraft(BaseModel):
+    implement: Literal["sprayer", "mower"]
+    fuel_capacity: float = 100
+
+
+class FieldDraft(BaseModel):
+    x: float
+    y: float
+
+
+class JobDraftIn(BaseModel):
+    type: Literal["spray", "mow"]
+    field_number: int  # 1-based position in `fields`
+    priority: int
+    deadline_hours: float  # hours after shift start
+    work_hours: float
+
+
+class ScenarioDraft(BaseModel):
+    """A scenario as a person (or the LLM reading a person) would give it: no ids, no fuel rates."""
+
+    name: str
+    tractors: list[TractorDraft]
+    fields: list[FieldDraft]
+    jobs: list[JobDraftIn]
+
+
+def _clamp(value: float, low: float, high: float) -> float:
+    return max(low, min(high, value))
+
+
+def _free_slot(wanted: tuple[int, int], taken: set[tuple[int, int]]) -> tuple[int, int]:
+    """The wanted cell, or the nearest free cell, so two fields never share a spot."""
+    cells = [(x, y) for x in range(GRID_MAX + 1) for y in range(1, GRID_MAX + 1) if (x, y) not in taken]
+    return min(cells, key=lambda c: (c[0] - wanted[0]) ** 2 + (c[1] - wanted[1]) ** 2)
+
+
+def scenario_from_draft(draft: ScenarioDraft) -> ScenarioIn:
+    """Turn a loose draft into a valid scenario: ids assigned, values clamped, defaults filled in.
+
+    Raises ValueError when there is nothing usable (no tractor, field or job).
+    """
+    tractors = [
+        TractorIn(id=f"T{i + 1}", implement=Implement(t.implement), fuel_capacity=_clamp(t.fuel_capacity, 30, 200),
+                  speed=DEFAULT_SPEED, fuel_per_travel_hour=DEFAULT_TRAVEL_BURN, fuel_per_work_hour=DEFAULT_WORK_BURN)
+        for i, t in enumerate(draft.tractors[:MAX_TRACTORS])
+    ]
+    taken: set[tuple[int, int]] = {(int(DEPOT.x), int(DEPOT.y))}
+    fields = []
+    for i, f in enumerate(draft.fields[:MAX_FIELDS]):
+        cell = _free_slot((round(_clamp(f.x, 0, GRID_MAX)), round(_clamp(f.y, 1, GRID_MAX))), taken)
+        taken.add(cell)
+        fields.append(FieldIn(id=f"F{i + 1}", x=cell[0], y=cell[1]))
+    jobs = []
+    for j in draft.jobs[:MAX_JOBS]:
+        if not 1 <= j.field_number <= len(fields):
+            continue
+        work = round(_clamp(j.work_hours, 0.25, 6), 2)
+        jobs.append(JobIn(id=f"J{len(jobs) + 1:02d}", type=j.type, field_id=fields[j.field_number - 1].id,
+                          priority=int(_clamp(j.priority, 1, 3)),
+                          deadline=round(_clamp(j.deadline_hours, work + 0.5, SHIFT_HOURS), 2), work_hours=work))
+    if not tractors or not fields or not jobs:
+        raise ValueError("a scenario needs at least one tractor, one field and one job on an existing field")
+    return ScenarioIn(name=draft.name.strip()[:60] or "Custom shift", depot=DEPOT, tractors=tractors, fields=fields, jobs=jobs)
+
+
+def random_live_scenario(seed: int, n_tractors: int | None = None, n_fields: int | None = None, n_jobs: int | None = None) -> ScenarioIn:
+    """A fresh shift for the dashboard: fields spread over the map, 2-4 tractors, every job doable by some tractor.
+
+    Separate from `random_scenario`, whose exact output the benchmark depends on.
+    """
+    rng = random.Random(seed)
+    n_tractors = int(_clamp(n_tractors or rng.randint(2, 4), 1, MAX_TRACTORS))
+    n_fields = int(_clamp(n_fields or rng.randint(5, 9), 1, MAX_FIELDS))
+    n_jobs = int(_clamp(n_jobs or rng.randint(n_fields, n_fields + 4), 1, MAX_JOBS))
+    implements = ["sprayer", "mower"] + [rng.choice(["sprayer", "sprayer", "mower"]) for _ in range(MAX_TRACTORS)]
+    tractors = [TractorDraft(implement=implements[i], fuel_capacity=rng.choice([60, 80, 100])) for i in range(n_tractors)]
+    available = {t.implement for t in tractors}
+    job_types = [t for t in ("spray", "mow") if {"spray": "sprayer", "mow": "mower"}[t] in available]
+    fields = [FieldDraft(x=x, y=y) for x, y in rng.sample(FIELD_SLOTS, n_fields)]
+    jobs = []
+    for i in range(n_jobs):
+        spot = fields[i % n_fields]
+        work = rng.choice([0.5, 1.0, 1.5, 2.0])
+        # Never earlier than a tractor leaving the depot at once could finish, plus some slack.
+        reachable = math.hypot(spot.x - DEPOT.x, spot.y - DEPOT.y) / DEFAULT_SPEED + work + rng.choice([0.5, 1.0, 2.0])
+        deadline = math.ceil(max(rng.uniform(3.0, 11.0), reachable) * 2) / 2
+        jobs.append(JobDraftIn(type=rng.choice(job_types), field_number=(i % n_fields) + 1, priority=rng.choice([1, 2, 2, 3]),
+                               deadline_hours=deadline, work_hours=work))
+    return scenario_from_draft(ScenarioDraft(name=f"Random shift #{seed}", tractors=tractors, fields=fields, jobs=jobs))

@@ -140,6 +140,8 @@ export interface Explanation {
 }
 
 export interface SessionView {
+  /** Changes whenever a new shift starts (restart or new scenario). */
+  session_id: string
   running: boolean
   speed: number
   scenario: string

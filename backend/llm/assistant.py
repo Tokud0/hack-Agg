@@ -9,12 +9,17 @@ fallback, so the demo works offline.
 from __future__ import annotations
 
 import json
+import logging
 import re
 from typing import Literal
 
 from pydantic import BaseModel, Field
 
+from fleet.scenario import ScenarioDraft, ScenarioIn, random_live_scenario, scenario_from_draft
+
 from .provider import provider_name, structured
+
+logger = logging.getLogger(__name__)
 
 NO_INVENTION = "Use only facts present in the JSON. Never invent causes, people, repairs, weather or numbers."
 
@@ -277,3 +282,36 @@ def _rule_based_jobs(text: str, fields: list[str], now_hours: float) -> JobDraft
               for f in found],
         note="Offline parser: deadline in 4 h and 1.5 h of work assumed.",
     )
+
+
+# --- scenario from a description ---------------------------------------------
+
+SCENARIO_SYSTEM = """You set up a farm shift for a fleet simulator from an operator's description.
+Return a scenario draft:
+- name: short title.
+- tractors: 1 to 4, each with implement "sprayer" or "mower" and fuel_capacity (60 to 100; use 100 if not said).
+- fields: 1 to 10 points on a 10 by 10 grid (x 0..10, y 1..10), spread apart; the depot is at x=5, y=0.
+- jobs: 1 to 14. type "spray" needs a sprayer, "mow" needs a mower. field_number is the 1-based position in fields.
+  priority 1 is most urgent, 3 least. deadline_hours is hours after the 06:00 shift start (a 14:00 deadline is 8).
+  work_hours between 0.5 and 3.
+Follow every number and detail the operator gives. Fill in whatever they leave out with sensible values,
+and make sure every job type has at least one tractor that can do it."""
+
+_COUNT = r"(\d+)\s*(?:x\s*)?"
+
+
+def _count(text: str, word: str) -> int | None:
+    found = re.search(_COUNT + word, text.lower())
+    return int(found.group(1)) if found else None
+
+
+def scenario_from_text(text: str, seed: int) -> tuple[ScenarioIn, str]:
+    """Build a scenario from plain words. Offline, only the counts of tractors, fields and jobs are read."""
+    result, source = _ask(SCENARIO_SYSTEM, text, ScenarioDraft)
+    if isinstance(result, ScenarioDraft):
+        try:
+            return scenario_from_draft(result), source
+        except ValueError:
+            logger.warning("LLM scenario draft was unusable, falling back to a generated one")
+    counts = (_count(text, "tractor"), _count(text, "field"), _count(text, r"(?:job|task)"))
+    return random_live_scenario(seed, *counts), "template"

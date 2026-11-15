@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import time
+from uuid import uuid4
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 
@@ -32,6 +33,8 @@ class Session:
     runs: dict[str, Run]
     running: bool = False
     speed: float = 1.0
+    # Changes on every restart or new scenario, so clients can tell a new shift from a longer log.
+    id: str = field(default_factory=lambda: uuid4().hex[:8])
     explanations: dict[int, dict] = field(default_factory=dict)
     lock: asyncio.Lock = field(default_factory=asyncio.Lock)
     _explaining: set[int] = field(default_factory=set)
@@ -142,6 +145,7 @@ class Session:
         return {
             "running": self.running,
             "speed": self.speed,
+            "session_id": self.id,
             "scenario": self.scenario.name,
             "runs": {name: snapshot(run) for name, run in self.runs.items()},
             "explanations": {str(k): v for k, v in self.explanations.items()},

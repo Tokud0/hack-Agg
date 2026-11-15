@@ -155,7 +155,10 @@ def tick(run: Run, dt: float = DEFAULT_DT) -> Run:
     rule = BASELINE_RULES.get(run.strategy)
     world = baseline.dispatch(run.world, run.network, rule) if rule else run.world
     world, events = step(world, run.network, dt)
-    entries = tuple(LogEntry(round(e.time, 2), e.kind, _sim_message(e.kind, e.tractor_id, e.job_id)) for e in events)
+    entries = tuple(
+        LogEntry(round(e.time, 2), e.kind, _sim_message(e.kind, e.tractor_id, e.job_id), {"tractor_id": e.tractor_id, "job_id": e.job_id})
+        for e in events
+    )
     return _with_log(replace(run, world=world), *entries)
 
 

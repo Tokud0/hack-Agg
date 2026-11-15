@@ -5,6 +5,7 @@ import type { Handoff } from './components/FieldMap'
 import { TractorIcon } from './components/Icons'
 import { BenchmarkModal, WhyDrawer } from './components/Overlays'
 import { ExplanationCard, InvariantPanel } from './components/Panels'
+import { RadioFeed } from './components/radio/RadioFeed'
 import { NavRail } from './components/shell/NavRail'
 import { SideDock, type DockTab } from './components/shell/SideDock'
 import { TopBar } from './components/shell/TopBar'
@@ -12,12 +13,14 @@ import { Copilot } from './components/tools/Copilot'
 import { EventsTool } from './components/tools/EventsTool'
 import { JobsTool } from './components/tools/JobsTool'
 import { useHashView } from './nav'
+import { useAgentRadio } from './radio'
 import type { BaselineKind } from './strategies'
 import type { LogEntry, MapInfo } from './types'
 import { CompareView } from './views/CompareView'
 import { LiveView } from './views/LiveView'
 import { LogView } from './views/LogView'
 import { OrchestrationView } from './views/OrchestrationView'
+import { ScenarioView } from './views/ScenarioView'
 import { ScheduleView } from './views/ScheduleView'
 
 const HANDOFF_MS = 3500
@@ -37,7 +40,7 @@ export default function App() {
   const [handoffs, setHandoffs] = useState<Handoff[]>([])
   const [whyJob, setWhyJob] = useState<string | null>(null)
   const [showBench, setShowBench] = useState(false)
-  const [dockTab, setDockTab] = useState<DockTab>('replan')
+  const [dockTab, setDockTab] = useState<DockTab>('radio')
   const [seenReplan, setSeenReplan] = useState<number | undefined>(undefined)
   const [baselineKind, setBaselineKind] = useState<BaselineKind>('baseline')
   const [error, setError] = useState<string | null>(null)
@@ -45,12 +48,13 @@ export default function App() {
   useEffect(() => {
     api.map().then(setMap).catch(() => setError('Backend not reachable on :8000'))
     api.health().then((h) => setProvider(h.provider)).catch(() => setProvider('offline'))
-  }, [connected, session?.scenario])
+  }, [connected, session?.session_id])
 
   const coord = session?.runs.coordinator
   const base = session?.runs[baselineKind]
   const latest = useLatest(coord?.log, 'replan')
   const latestEvent = useLatest(coord?.log, 'event')
+  const radio = useAgentRadio(coord?.log, session?.explanations, coord?.time ?? 0, session?.session_id)
   const isInitialPlan = latest?.data.diff?.trigger.type === 'initial_plan'
 
   // React to each new re-plan: handoff arrows on the map, temporary highlight, and surface the explanation.
@@ -60,8 +64,8 @@ export default function App() {
     const moves = changes.filter((c) => c.before.startsWith('T') && c.after.startsWith('T') && c.before !== c.after)
     setHandoffs(moves.map((c) => ({ key: `${latest.index}-${c.job_id}`, from: c.before, to: c.after, jobId: c.job_id })))
     setAutoHighlight(isInitialPlan ? [] : changes.map((c) => c.job_id))
-    // The chat is where the operator confirms events, so it is never yanked away; the tab gets a dot instead.
-    if (!isInitialPlan) setDockTab((tab) => (tab === 'chat' ? tab : 'replan'))
+    // Bring the agents' conversation into view. The chat is where the operator confirms events, so it is never yanked away.
+    if (!isInitialPlan) setDockTab((tab) => (tab === 'chat' ? tab : 'radio'))
     const t = window.setTimeout(() => { setHandoffs([]); setAutoHighlight([]) }, HANDOFF_MS)
     return () => window.clearTimeout(t)
   }, [latest?.index]) // eslint-disable-line react-hooks/exhaustive-deps -- fire once per re-plan
@@ -130,7 +134,8 @@ export default function App() {
         provider={provider} isConnected={connected}
         onTogglePlay={() => act(() => api.control(session.running ? 'pause' : 'play'))}
         onSpeed={(s) => act(() => api.control('speed', s))}
-        onReset={() => act(() => api.control('reset'))} />
+        onReset={() => act(() => api.control('reset'))}
+        onRandom={() => act(async () => api.uploadScenario(await api.randomScenario()))} />
 
       <div className="flex flex-1 flex-col xl:min-h-0 xl:flex-row">
         <NavRail view={page} onNavigate={navigate} />
@@ -140,20 +145,22 @@ export default function App() {
           <div className="min-h-0 flex-1">
             {page === 'live' && (
               <LiveView run={coord} map={map} baselineKind={baselineKind} baselineMetrics={base.metrics}
-                highlight={highlight} handoffs={handoffs} lastWords={lastWords} onBreak={breakdown} onSelectJob={setWhyJob} />
+                highlight={highlight} handoffs={handoffs} lastWords={lastWords} speech={radio.speech} onBreak={breakdown} onSelectJob={setWhyJob} />
             )}
             {page === 'orchestration' && <OrchestrationView log={coord.log} explanations={session.explanations} />}
             {page === 'schedule' && <ScheduleView runs={session.runs} highlight={highlight} onSelectJob={setWhyJob} />}
             {page === 'compare' && (
               <CompareView coordinator={coord} baseline={base} baselineKind={baselineKind} onBaselineKind={setBaselineKind} map={map}
-                highlight={highlight} handoffs={handoffs} onSelectJob={setWhyJob} onOpenBenchmark={() => setShowBench(true)} />
+                highlight={highlight} handoffs={handoffs} onSelectJob={setWhyJob} onOpenBenchmark={() => setShowBench(true)} speech={radio.speech} />
             )}
             {page === 'log' && <LogView log={coord.log} />}
+            {page === 'scenario' && <ScenarioView onStarted={() => navigate('live')} />}
           </div>
         </main>
 
         <SideDock tab={dockTab} onTab={setDockTab} hasUnreadReplan={hasUnreadReplan}
           panels={{
+            radio: <RadioFeed items={radio.items} backlog={radio.backlog} />,
             replan: replanPanel,
             chat: <Copilot />,
             jobs: <JobsTool fields={map.fields.map((f) => f.id)} nowHours={coord.time} />,

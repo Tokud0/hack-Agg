@@ -11,7 +11,10 @@ from fleet.models import JobStatus, Plan, TractorStatus
 from fleet.replan import block_road, break_tractor, current_plan, fault_test, on_closed_stretch, replan, reroute_in_transit
 from fleet.agents import Recorder, transcript
 from fleet.routing import build_network
-from fleet.scenario import EventIn, ScenarioIn, load_scenario, random_scenario, to_world
+from fleet.scenario import (
+    EventIn, FieldDraft, JobDraftIn, ScenarioDraft, ScenarioIn, TractorDraft, load_scenario, random_live_scenario,
+    random_scenario, scenario_from_draft, to_world,
+)
 
 SCENARIO_PATH = Path(__file__).resolve().parents[1] / "scenario.json"
 
@@ -399,3 +402,42 @@ def test_later_legs_of_a_route_avoid_a_road_that_closes_ahead(world):
     path = reroute_in_transit(closed, network).tractors["T1"].path
     assert path[0] == "F4" and path[-1] == "F6" and path == ("F4", *network.path("F4", "F6"))
     assert all(frozenset(leg) != frozenset(("F4", "F6")) for leg in zip(path, path[1:]))
+
+
+# --- live scenarios ----------------------------------------------------------
+
+
+@pytest.mark.parametrize("seed", range(25))
+def test_random_live_scenario_is_valid_spread_out_and_fully_staffed(seed):
+    scenario = random_live_scenario(seed)
+    spots = [(f.x, f.y) for f in scenario.fields]
+    assert len(set(spots)) == len(spots) and (scenario.depot.x, scenario.depot.y) not in spots
+    implements = {t.implement.value for t in scenario.tractors}
+    assert all({"spray": "sprayer", "mow": "mower"}[j.type] in implements for j in scenario.jobs)
+    run = run_to_end(start(scenario, "coordinator", with_demo_events=False))
+    assert metrics(run)["invariant_violations"] == 0
+
+
+def test_random_live_scenarios_differ_between_seeds():
+    assert random_live_scenario(1) != random_live_scenario(2)
+    assert random_live_scenario(7) == random_live_scenario(7)
+
+
+def test_draft_is_clamped_and_overlapping_fields_are_moved_apart():
+    draft = ScenarioDraft(
+        name="  ",
+        tractors=[TractorDraft(implement="sprayer", fuel_capacity=9999)],
+        fields=[FieldDraft(x=3, y=3), FieldDraft(x=3, y=3), FieldDraft(x=50, y=-4)],
+        jobs=[JobDraftIn(type="spray", field_number=1, priority=9, deadline_hours=0.1, work_hours=2),
+              JobDraftIn(type="spray", field_number=99, priority=1, deadline_hours=5, work_hours=1)],
+    )
+    scenario = scenario_from_draft(draft)
+    assert scenario.name == "Custom shift" and scenario.tractors[0].fuel_capacity == 200
+    assert len({(f.x, f.y) for f in scenario.fields}) == 3 and all(0 <= f.x <= 10 and 1 <= f.y <= 10 for f in scenario.fields)
+    assert [j.field_id for j in scenario.jobs] == ["F1"]  # the job on a missing field is dropped
+    assert scenario.jobs[0].priority == 3 and scenario.jobs[0].deadline == 2.5
+
+
+def test_draft_with_nothing_usable_is_rejected():
+    with pytest.raises(ValueError):
+        scenario_from_draft(ScenarioDraft(name="x", tractors=[], fields=[], jobs=[]))

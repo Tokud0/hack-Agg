@@ -1,6 +1,6 @@
 import { motion } from 'framer-motion'
 import { clock } from '../../theme'
-import { PauseIcon, PlayIcon, ResetIcon, SparkIcon, TractorIcon } from '../Icons'
+import { PauseIcon, PlayIcon, ResetIcon, ShuffleIcon, SparkIcon, TractorIcon } from '../Icons'
 
 const SHIFT_HOURS = 12
 
@@ -15,9 +15,10 @@ interface TopBarProps {
   onTogglePlay: () => void
   onSpeed: (speed: number) => void
   onReset: () => void
+  onRandom: () => void
 }
 
-export function TopBar({ scenario, time, isRunning, speed, speeds, provider, isConnected, onTogglePlay, onSpeed, onReset }: TopBarProps) {
+export function TopBar({ scenario, time, isRunning, speed, speeds, provider, isConnected, onTogglePlay, onSpeed, onReset, onRandom }: TopBarProps) {
   const shiftShare = Math.min(1, time / SHIFT_HOURS)
   const hasAi = provider !== 'offline'
   return (
@@ -62,6 +63,8 @@ export function TopBar({ scenario, time, isRunning, speed, speeds, provider, isC
         <span className="flex items-center gap-1.5 text-[11px] text-white/50">
           <span className={`h-2 w-2 rounded-full ${isConnected ? 'bg-leaf' : 'bg-alarm'}`} />{isConnected ? 'Live' : 'Disconnected'}
         </span>
+        <button type="button" onClick={onRandom} title="Start a new shift with random fields, tractors and jobs"
+          className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10 hover:text-white"><ShuffleIcon size={14} />Random shift</button>
         <button type="button" onClick={onReset} title="Start the shift over"
           className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10 hover:text-white"><ResetIcon size={14} />Restart shift</button>
       </div>

@@ -5,6 +5,7 @@ import { FleetStrip } from '../components/FleetStrip'
 import { CloseIcon } from '../components/Icons'
 import { Counters } from '../components/Panels'
 import { ViewHeader } from '../components/shell/ViewHeader'
+import type { Speech } from '../radio'
 import { BASELINES, type BaselineKind } from '../strategies'
 import type { MapInfo, Metrics, RunSnapshot } from '../types'
 
@@ -14,7 +15,7 @@ const GUIDE = [
   'Press Run to start the shift',
   'Break a tractor on its card and watch the re-plan',
   'Click any field or job to see why it went there',
-  'Ask the copilot or forecast "what if" on the right',
+  'Follow the agents talking on the map and in Radio on the right',
 ]
 
 function Guide({ onClose }: { onClose: () => void }) {
@@ -40,11 +41,12 @@ interface LiveViewProps {
   highlight: Set<string>
   handoffs: Handoff[]
   lastWords: Record<string, string>
+  speech: Speech | null
   onBreak: (tractorId: string) => void
   onSelectJob: (jobId: string) => void
 }
 
-export function LiveView({ run, map, baselineKind, baselineMetrics, highlight, handoffs, lastWords, onBreak, onSelectJob }: LiveViewProps) {
+export function LiveView({ run, map, baselineKind, baselineMetrics, highlight, handoffs, lastWords, speech, onBreak, onSelectJob }: LiveViewProps) {
   const [showGuide, setShowGuide] = useState(true)
   return (
     <div className="flex h-full flex-col gap-3">
@@ -55,7 +57,7 @@ export function LiveView({ run, map, baselineKind, baselineMetrics, highlight, h
       <div className="grid min-h-0 flex-1 gap-3 lg:grid-cols-[minmax(0,1fr)_300px]">
         <section className="panel flex min-h-[420px] flex-col p-3" aria-label="Field map">
           <div className="min-h-0 flex-1">
-            <FieldMap run={run} map={map} highlight={highlight} handoffs={handoffs} onSelectJob={onSelectJob} />
+            <FieldMap run={run} map={map} highlight={highlight} handoffs={handoffs} onSelectJob={onSelectJob} speech={speech} />
           </div>
           <div className="mt-2"><MapLegend /></div>
         </section>

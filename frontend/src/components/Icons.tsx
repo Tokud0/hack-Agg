@@ -44,6 +44,8 @@ export const MapIcon = (p: IconProps) => <svg {...base(p)}><path d="M9 4L3 6v14l
 export const TimelineIcon = (p: IconProps) => <svg {...base(p)}><path d="M4 6h9M8 12h11M5 18h7" /></svg>
 export const ArrowRightIcon = (p: IconProps) => <svg {...base(p)}><path d="M4 12h15M13 6l6 6-6 6" /></svg>
 export const FlowIcon = (p: IconProps) => <svg {...base(p)}><circle cx="5" cy="12" r="2.5" /><circle cx="19" cy="6" r="2.5" /><circle cx="19" cy="18" r="2.5" /><path d="M7.5 12h4l3-5h2M11.5 12l3 5h2" /></svg>
+export const ShuffleIcon = (p: IconProps) => <svg {...base(p)}><path d="M16 3h5v5M4 20L21 3M21 16v5h-5M15 15l6 6M4 4l5 5" /></svg>
+export const GridIcon = (p: IconProps) => <svg {...base(p)}><rect x="4" y="4" width="7" height="7" rx="1" /><rect x="13" y="4" width="7" height="7" rx="1" /><rect x="4" y="13" width="7" height="7" rx="1" /><rect x="13" y="13" width="7" height="7" rx="1" /></svg>
 export const PlusIcon = (p: IconProps) => <svg {...base(p)}><path d="M12 5v14M5 12h14" /></svg>
 
 export function JobTypeIcon({ type, size = 14, ...rest }: IconProps & { type: string }) {

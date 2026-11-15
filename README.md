@@ -31,7 +31,9 @@ Five pages, one top bar (run, clock, speed) and one side panel that stay in plac
 - **Schedule**: Gantt by tractor (deadlines and events marked) and the full job table, for the coordinator or either baseline.
 - **Compare**: baseline (FCFS or EDF) and coordinator side by side on the same shift, plus the 50-shift benchmark.
 - **Log**: every event, re-plan and finished job, with event-log export.
-- **Side panel**: *Re-plan* (AI explanation and the 4 safety checks of the latest re-plan), *Copilot* chat, *Add jobs* (free text, form or scenario JSON), *Events* (apply a disruption or forecast it with what-if).
+- **Scenario**: build your own shift. Describe it in plain words (the LLM turns the text into tractors, fields and jobs; offline, the counts in the text are used), roll a random one, or place fields on the map by clicking and dragging and edit tractors and jobs in lists. *Random shift* in the top bar starts a new random shift in one click.
+- **Agents talking, live**: the *Radio* tab of the side panel is a running feed of what the agents say to each other, and the same message appears on the map as a speech bubble over the tractor that is speaking, with lines to whoever it addresses. Status calls (started, finished, refuelling) arrive as the simulator reports them. A re-plan is decided in milliseconds, so its conversation is the recorded trace played back slowed down, and the feed says so.
+- **Side panel**: *Radio*, *Re-plan* (AI explanation and the 4 safety checks of the latest re-plan), *Copilot* chat, *Add jobs* (free text, form or scenario JSON), *Events* (apply a disruption or forecast it with what-if).
 - Click any job for **"why?"**: the score breakdown and every rejected alternative.
 
 ## Orchestration: ATC's agent layer
@@ -63,7 +65,7 @@ The **Agents** page shows this for any re-plan: the full conversation (filter by
 
 ```bash
 cd backend
-.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 72 tests
+.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 103 tests
 .venv/bin/python -m scripts.benchmark --n 50       # coordinator vs baseline table
 .venv/bin/python -m scripts.export_demo            # writes results/
 ```

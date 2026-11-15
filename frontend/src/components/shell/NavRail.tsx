@@ -1,5 +1,5 @@
 import type { View } from '../../nav'
-import { ChartIcon, FlowIcon, ListIcon, MapIcon, TimelineIcon } from '../Icons'
+import { ChartIcon, FlowIcon, GridIcon, ListIcon, MapIcon, TimelineIcon } from '../Icons'
 
 const ITEMS: { id: View; label: string; hint: string; icon: typeof MapIcon }[] = [
   { id: 'live', label: 'Live', hint: 'Map and fleet right now', icon: MapIcon },
@@ -7,6 +7,7 @@ const ITEMS: { id: View; label: string; hint: string; icon: typeof MapIcon }[] =
   { id: 'schedule', label: 'Schedule', hint: 'Timeline and job list', icon: TimelineIcon },
   { id: 'compare', label: 'Compare', hint: 'Our coordinator against simple dispatch rules', icon: ChartIcon },
   { id: 'log', label: 'Log', hint: 'Every event and decision of the shift', icon: ListIcon },
+  { id: 'scenario', label: 'Scenario', hint: 'Build your own shift or roll a random one', icon: GridIcon },
 ]
 
 interface NavRailProps {

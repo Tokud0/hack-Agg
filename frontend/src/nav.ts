@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 
-export type View = 'live' | 'orchestration' | 'schedule' | 'compare' | 'log'
+export type View = 'live' | 'orchestration' | 'schedule' | 'compare' | 'log' | 'scenario'
 
-const VIEW_IDS: View[] = ['live', 'orchestration', 'schedule', 'compare', 'log']
+const VIEW_IDS: View[] = ['live', 'orchestration', 'schedule', 'compare', 'log', 'scenario']
 const DEFAULT_VIEW: View = 'live'
 
 function viewFromHash(): View {

@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import type { Scenario } from './scenario'
 import type { FaultTestResult, JobDraft, MapInfo, ProposedEvent, SessionView, WhatIfResult, WhyFacts } from './types'
 
 const RECONNECT_MS = 1000
@@ -38,6 +39,10 @@ export const api = {
       body: JSON.stringify({ text }),
     }),
   whatIf: (event: ProposedEvent) => request<WhatIfResult>('/api/whatif', { method: 'POST', body: JSON.stringify(event) }),
+  currentScenario: () => request<Scenario>('/api/scenario'),
+  randomScenario: () => request<Scenario>('/api/scenario/random'),
+  describeScenario: (text: string) =>
+    request<{ scenario: Scenario; source: string }>('/api/scenario/describe', { method: 'POST', body: JSON.stringify({ text }) }),
   uploadScenario: (scenario: unknown) =>
     request<{ ok: boolean; scenario: string; jobs: number }>('/api/scenario', { method: 'POST', body: JSON.stringify(scenario) }),
   askAgent: (tractorId: string, question: string, replanIndex: number) =>

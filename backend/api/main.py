@@ -5,6 +5,7 @@ from __future__ import annotations
 import asyncio
 import contextlib
 import logging
+import secrets
 from contextlib import asynccontextmanager
 from functools import lru_cache
 from typing import Literal
@@ -19,7 +20,8 @@ load_dotenv()
 from fleet.engine import log_as_dicts, metrics  # noqa: E402
 from fleet.scenario import EventIn, ScenarioIn  # noqa: E402
 from fleet.why import explain_assignment  # noqa: E402
-from llm.assistant import answer_why, ask_tractor, copilot, llm_provider, narrate_what_if, parse_jobs  # noqa: E402
+from fleet.scenario import random_live_scenario  # noqa: E402
+from llm.assistant import answer_why, ask_tractor, copilot, scenario_from_text, llm_provider, narrate_what_if, parse_jobs  # noqa: E402
 from scripts.benchmark import run_benchmark  # noqa: E402
 
 from .session import ALLOWED_SPEEDS, FRAME_SECONDS, Session, reset_runs  # noqa: E402
@@ -216,6 +218,28 @@ async def parse_job_text(body: JobTextIn) -> dict:
         if d.field_id in fields and 1 <= d.priority <= 3 and 0 < d.work_hours <= 8
     ]
     return {"jobs": valid, "note": drafts.note, "source": source}
+
+
+class ScenarioTextIn(BaseModel):
+    text: str = Field(min_length=3, max_length=2000)
+
+
+@app.get("/api/scenario")
+def current_scenario() -> dict:
+    """The scenario of the running shift, so the editor can start from it."""
+    return session().scenario.model_dump(mode="json")
+
+
+@app.get("/api/scenario/random")
+def random_scenario_draft(seed: int | None = None) -> dict:
+    """A generated scenario to look at or edit. Nothing starts until it is posted to /api/scenario."""
+    return random_live_scenario(seed if seed is not None else secrets.randbelow(100_000)).model_dump(mode="json")
+
+
+@app.post("/api/scenario/describe")
+async def describe_scenario(body: ScenarioTextIn) -> dict:
+    scenario, source = await asyncio.to_thread(scenario_from_text, body.text, secrets.randbelow(100_000))
+    return {"scenario": scenario.model_dump(mode="json"), "source": source}
 
 
 @app.post("/api/scenario")

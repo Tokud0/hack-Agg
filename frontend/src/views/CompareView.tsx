@@ -3,6 +3,7 @@ import { ChartIcon } from '../components/Icons'
 import { MapPanel } from '../components/MapPanel'
 import { Segmented, ViewHeader } from '../components/shell/ViewHeader'
 import { BASELINES, BASELINE_OPTIONS, type BaselineKind } from '../strategies'
+import type { Speech } from '../radio'
 import type { MapInfo, RunSnapshot } from '../types'
 
 interface CompareViewProps {
@@ -15,11 +16,12 @@ interface CompareViewProps {
   handoffs: Handoff[]
   onSelectJob: (jobId: string) => void
   onOpenBenchmark: () => void
+  speech: Speech | null
 }
 
 const NO_HIGHLIGHT = new Set<string>()
 
-export function CompareView({ coordinator, baseline, baselineKind, onBaselineKind, map, highlight, handoffs, onSelectJob, onOpenBenchmark }: CompareViewProps) {
+export function CompareView({ coordinator, baseline, baselineKind, onBaselineKind, map, highlight, handoffs, onSelectJob, onOpenBenchmark, speech }: CompareViewProps) {
   return (
     <div className="flex h-full flex-col gap-3">
       <ViewHeader title="Compare" description="Same shift, same events: a simple dispatch rule on the left, our coordinator on the right."
@@ -33,7 +35,7 @@ export function CompareView({ coordinator, baseline, baselineKind, onBaselineKin
         <MapPanel run={baseline} map={map} accent="#8fa396" title={`Baseline · ${BASELINES[baselineKind].short}`} subtitle={BASELINES[baselineKind].subtitle}
           highlight={NO_HIGHLIGHT} handoffs={[]} onSelectJob={onSelectJob} />
         <MapPanel run={coordinator} map={map} accent="#7bd88f" title="Our coordinator" subtitle="constraint-safe re-planning"
-          highlight={highlight} handoffs={handoffs} compareTo={baseline.metrics} onSelectJob={onSelectJob} />
+          highlight={highlight} handoffs={handoffs} compareTo={baseline.metrics} onSelectJob={onSelectJob} speech={speech} />
       </div>
       <MapLegend />
     </div>

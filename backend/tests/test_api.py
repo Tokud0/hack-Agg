@@ -174,3 +174,24 @@ def test_tractor_agent_can_be_asked_about_an_older_round(client):
     res = client.post("/api/agents/T1/ask", json={"question": "What did you take?", "replan_index": first})
     assert res.status_code == 200 and "is mine" in res.json()["answer"]
     assert client.post("/api/agents/T1/ask", json={"question": "x", "replan_index": 0}).status_code == 404
+
+
+def test_random_scenario_can_be_fetched_then_started(client):
+    scenario = client.get("/api/scenario/random", params={"seed": 5}).json()
+    assert scenario["name"] == "Random shift #5"
+    before = client.get("/api/state").json()["session_id"]
+    assert client.post("/api/scenario", json=scenario).status_code == 200
+    state = client.get("/api/state").json()
+    assert state["scenario"] == "Random shift #5" and state["session_id"] != before
+    assert client.get("/api/scenario").json()["fields"] == scenario["fields"]
+
+
+def test_describing_a_scenario_offline_reads_the_counts(client):
+    res = client.post("/api/scenario/describe", json={"text": "2 tractors, 4 fields and 6 jobs please"})
+    body = res.json()
+    assert res.status_code == 200 and body["source"] == "template"
+    assert (len(body["scenario"]["tractors"]), len(body["scenario"]["fields"]), len(body["scenario"]["jobs"])) == (2, 4, 6)
+
+
+def test_invalid_scenario_is_rejected(client):
+    assert client.post("/api/scenario", json={"name": "x", "depot": {"x": 5, "y": 0}, "tractors": [], "fields": [], "jobs": []}).status_code == 422

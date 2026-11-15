@@ -315,3 +315,36 @@ def scenario_from_text(text: str, seed: int) -> tuple[ScenarioIn, str]:
             logger.warning("LLM scenario draft was unusable, falling back to a generated one")
     counts = (_count(text, "tractor"), _count(text, "field"), _count(text, r"(?:job|task)"))
     return random_live_scenario(seed, *counts), "template"
+
+
+# --- shift briefing ----------------------------------------------------------
+
+BRIEFING_SYSTEM = """You brief a farm fleet manager on the shift so far. You get verified facts as JSON:
+the time, job counts, how the fleet compares with a simple first-come-first-served dispatcher on the same
+shift, the events so far, and an "attention" list of things that need a decision or a close eye.
+- headline: max 9 words, the single most important thing.
+- summary: 3 to 4 short sentences. Start with progress, then what went wrong and how the fleet adapted,
+  then what the manager should look at. Use the job, field and tractor ids and the clock times given.
+Do not list every item; the attention list is shown next to your text."""
+
+
+class Briefing(BaseModel):
+    headline: str
+    summary: str
+
+
+def template_briefing(facts: dict) -> Briefing:
+    jobs = facts["jobs"]
+    attention = facts["attention"]
+    headline = f"{len(attention)} thing{'s' if len(attention) != 1 else ''} need attention" if attention else "Shift is on plan"
+    events = f" {len(facts['events'])} event(s) so far, each re-planned." if facts["events"] else " No events so far."
+    summary = (
+        f"At {facts['clock']}, {jobs['done_on_time']} of {jobs['total']} jobs are done on time, {jobs['in_progress']} in progress "
+        f"and {jobs['waiting']} waiting; {jobs['not_doable']} cannot be done.{events}"
+    )
+    return Briefing(headline=headline, summary=summary)
+
+
+def shift_briefing(facts: dict) -> tuple[Briefing, str]:
+    result, source = _ask(BRIEFING_SYSTEM, json.dumps(facts, sort_keys=True), Briefing)
+    return (result, source) if isinstance(result, Briefing) else (template_briefing(facts), "template")

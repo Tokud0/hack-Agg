@@ -2,7 +2,7 @@ import { motion } from 'framer-motion'
 import { useEffect, useState } from 'react'
 import { Bar, BarChart, Legend, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
 import { api, type BenchmarkResult, type Versus } from '../api'
-import type { WhyFacts } from '../types'
+import type { AttentionItem, ShiftBriefing, WhyFacts } from '../types'
 import { tractorColor } from '../theme'
 import { CloseIcon } from './Icons'
 import { SourceBadge } from './Panels'
@@ -172,6 +172,71 @@ export function BenchmarkModal({ onClose }: { onClose: () => void }) {
             ))}
           </div>
           <p className="mt-2 text-xs text-white/40">Means per scenario. Higher is better for jobs; lower is better for driving and idle time. Losses come from unforeseen breakdowns hitting a plan that was optimal before the breakdown.</p>
+        </>
+      )}
+    </Backdrop>
+  )
+}
+
+/* ---------- shift briefing ---------- */
+
+const ATTENTION_STYLE: Record<AttentionItem['kind'], { label: string; cls: string }> = {
+  broken: { label: 'Broken down', cls: 'bg-alarm/15 text-alarm' },
+  lost: { label: 'Cannot be done', cls: 'bg-alarm/15 text-alarm' },
+  at_risk: { label: 'At risk', cls: 'bg-wheat/15 text-wheat' },
+  low_fuel: { label: 'Low fuel', cls: 'bg-wheat/15 text-wheat' },
+}
+
+export function BriefingModal({ onClose }: { onClose: () => void }) {
+  const [data, setData] = useState<ShiftBriefing | null>(null)
+  const [error, setError] = useState<string | null>(null)
+  useEffect(() => {
+    api.briefing().then(setData).catch((e: unknown) => setError(e instanceof Error ? e.message : 'The briefing could not be loaded'))
+  }, [])
+
+  const counts = data ? [
+    { label: 'Done on time', value: `${data.jobs.done_on_time}/${data.jobs.total}`, cls: 'text-leaf' },
+    { label: 'In progress', value: data.jobs.in_progress, cls: 'text-white' },
+    { label: 'Waiting', value: data.jobs.waiting, cls: 'text-white/70' },
+    { label: 'Cannot be done', value: data.jobs.not_doable, cls: data.jobs.not_doable ? 'text-alarm' : 'text-white/70' },
+  ] : []
+
+  return (
+    <Backdrop onClose={onClose}>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <div className="text-xs font-bold uppercase tracking-widest text-white/50">Shift briefing{data && ` · ${data.clock}`}</div>
+          <h2 className="mt-1 text-2xl font-extrabold leading-tight">{data?.headline ?? (error ? 'No briefing' : 'Reading the shift…')}</h2>
+        </div>
+        <button type="button" onClick={onClose} aria-label="Close" className="text-white/50 hover:text-white"><CloseIcon size={18} /></button>
+      </div>
+      {error && <p role="alert" className="mt-3 text-sm text-alarm">{error}</p>}
+      {data && (
+        <>
+          <p className="mt-3 text-[14.5px] leading-relaxed text-white/85">{data.summary}</p>
+          <div className="mt-1"><SourceBadge source={data.source} /></div>
+          <div className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4">
+            {counts.map((c) => (
+              <div key={c.label} className="rounded-lg bg-black/25 px-3 py-2">
+                <div className="text-[10px] uppercase tracking-wider text-white/45">{c.label}</div>
+                <div className={`font-mono text-xl font-bold ${c.cls}`}>{c.value}</div>
+              </div>
+            ))}
+          </div>
+          <h3 className="mt-5 text-xs font-bold uppercase tracking-widest text-white/60">Needs your attention · {data.attention.length}</h3>
+          {data.attention.length === 0
+            ? <p className="mt-1.5 text-sm text-white/50">Nothing. Every job is planned with time to spare and every tractor is healthy.</p>
+            : (
+              <ul className="mt-1.5 space-y-1.5">
+                {data.attention.map((item) => (
+                  <li key={`${item.kind}-${item.id}`} className="flex items-start gap-2 text-[13px]">
+                    <span className={`mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-bold ${ATTENTION_STYLE[item.kind].cls}`}>{ATTENTION_STYLE[item.kind].label}</span>
+                    <span className="text-white/80">{item.text}</span>
+                  </li>
+                ))}
+              </ul>
+            )}
+          <p className="mt-4 text-[11px] text-white/40">The numbers and the attention list are computed from the live state. Only the wording of the summary comes from the LLM.</p>
         </>
       )}
     </Backdrop>

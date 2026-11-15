@@ -21,7 +21,7 @@ from fleet.engine import log_as_dicts, metrics  # noqa: E402
 from fleet.scenario import EventIn, ScenarioIn  # noqa: E402
 from fleet.why import explain_assignment  # noqa: E402
 from fleet.generate import impossible_at_start, make_feasible, random_shift, with_surprises  # noqa: E402
-from llm.assistant import answer_why, ask_tractor, copilot, scenario_from_text, llm_provider, narrate_what_if, parse_jobs  # noqa: E402
+from llm.assistant import answer_why, ask_tractor, copilot, scenario_from_text, shift_briefing, llm_provider, narrate_what_if, parse_jobs  # noqa: E402
 from scripts.benchmark import run_benchmark  # noqa: E402
 
 from .session import ALLOWED_SPEEDS, FRAME_SECONDS, Session, reset_runs  # noqa: E402
@@ -276,6 +276,14 @@ async def what_if(body: EventRequest) -> dict:
         raise HTTPException(422, str(exc)) from exc
     narration, source = await asyncio.to_thread(narrate_what_if, facts)
     return {"facts": facts, "headline": narration.headline, "answer": narration.answer, "source": source}
+
+
+@app.get("/api/briefing")
+async def briefing() -> dict:
+    """The shift so far in a few sentences, with the list of things that need attention."""
+    facts = session().briefing_facts()
+    text, source = await asyncio.to_thread(shift_briefing, facts)
+    return {"headline": text.headline, "summary": text.summary, "source": source, **facts}
 
 
 class AgentQuestionIn(BaseModel):

@@ -12,9 +12,10 @@ from pathlib import Path
 from fleet import engine
 from fleet.engine import Run
 from fleet.scenario import EventIn, ScenarioIn, load_scenario
-from fleet.generate import SURPRISE
+from fleet.generate import SURPRISE, clock
 from fleet.models import Job
 from fleet.replan import fault_test
+from fleet.risk import at_risk
 from fleet.whatif import forecast
 from llm.assistant import explain_replan
 
@@ -26,6 +27,7 @@ SCENARIO_PATH = Path(__file__).resolve().parents[1] / "scenario.json"
 FRAME_SECONDS = 0.1
 SIM_HOURS_PER_SECOND_AT_1X = 0.15  # a 10 h shift plays in ~67 s at 1x
 ALLOWED_SPEEDS = (0.5, 1.0, 2.0, 4.0, 8.0)
+LOW_FUEL_SHARE = 0.2
 
 
 @dataclass
@@ -163,6 +165,43 @@ class Session:
             **static_map(self.runs["coordinator"].world),
             "speeds": list(ALLOWED_SPEEDS),
             "shift_start_hour": self.scenario.shift_start_hour,
+        }
+
+    def briefing_facts(self) -> dict:
+        """Verified numbers for the shift briefing, plus the items that need the manager's eye."""
+        run = self.runs["coordinator"]
+        world = run.world
+        start = self.scenario.shift_start_hour
+        ours, theirs = engine.metrics(run), engine.metrics(self.runs["baseline"])
+        statuses = [j.status.value for j in world.jobs.values()]
+        attention = [
+            *({"kind": "broken", "id": t.id, "text": f"{t.id} is broken down"}
+              for t in world.tractors.values() if t.status.value == "broken"),
+            *({"kind": "lost", "id": j.id, "text": f"{j.id} (P{j.priority}, {j.field_id}) cannot be done: {j.reason}"}
+              for j in world.jobs.values() if j.status.value == "unassignable"),
+            *({"kind": "at_risk", "id": o.job_id,
+               "text": f"{o.job_id} finishes at {clock(o.finish, start)}, {max(0, round(o.slack * 60))} min before its deadline"}
+              for o in at_risk(world, run.network)),
+            *({"kind": "low_fuel", "id": t.id, "text": f"{t.id} is at {t.fuel / t.fuel_capacity:.0%} fuel"}
+              for t in world.tractors.values() if t.status.value != "broken" and t.fuel < LOW_FUEL_SHARE * t.fuel_capacity),
+        ]
+        return {
+            "scenario": self.scenario.name,
+            "clock": clock(world.time, start),
+            "jobs": {
+                "total": len(statuses),
+                "done_on_time": ours["jobs_completed"],
+                "in_progress": statuses.count("in_progress"),
+                "waiting": statuses.count("assigned") + statuses.count("pending"),
+                "not_doable": statuses.count("unassignable"),
+            },
+            "versus_first_come_first_served": {
+                "jobs_done_on_time": [ours["jobs_completed"], theirs["jobs_completed"]],
+                "urgent_done": [ours["priority1_completed"], theirs["priority1_completed"]],
+                "idle_hours": [ours["idle_hours"], theirs["idle_hours"]],
+            },
+            "events": [f"{clock(e.time, start)} {e.message}" for e in run.log if e.kind == "event"],
+            "attention": attention,
         }
 
     def agent_facts(self, tractor_id: str, replan_index: int | None = None) -> dict:

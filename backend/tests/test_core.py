@@ -9,6 +9,7 @@ from fleet.feasibility import StartContext, evaluate_queue
 from fleet.generate import impossible_at_start, make_feasible, random_shift
 from fleet.invariants import check_plan
 from fleet.models import JobStatus, Plan, TractorStatus
+from fleet.risk import at_risk, outlook
 from fleet.replan import block_road, break_tractor, current_plan, fault_test, on_closed_stretch, replan, reroute_in_transit
 from fleet.agents import Recorder, transcript
 from fleet.routing import build_network
@@ -304,7 +305,8 @@ def test_broken_tractor_announces_release_and_stays_out_of_the_auction(world):
     assert messages[0].sender == "T1" and messages[0].kind == "alert"
     assert not [m for m in messages if m.sender == "T1" and m.kind in ("bid", "decline", "ack")]
     assert _replay_queues(messages).get("T3", ()) == result.plan.queues["T3"]
-    assert messages[-1].kind == "ack" and any(m.kind == "verdict" and m.data["accepted"] for m in messages)
+    closing = [m.kind for m in messages if m.kind != "risk"]  # deadline warnings, if any, come after the confirmations
+    assert closing[-1] == "ack" and any(m.kind == "verdict" and m.data["accepted"] for m in messages)
 
 
 def test_navigation_agent_reports_the_detour_and_routes_the_winners(world):
@@ -481,3 +483,25 @@ def test_priority_change_on_finished_work_is_ignored(scenario):
     run = run_to_end(start(scenario, "coordinator", with_demo_events=False))
     done = next(j.id for j in run.world.jobs.values() if j.status == JobStatus.DONE)
     assert apply_event(run, EventIn(at=run.world.time, type="change_priority", job_id=done, priority=1)) is run
+
+
+# --- deadline risk -----------------------------------------------------------
+
+
+def test_outlook_covers_every_planned_job_and_none_is_late(world):
+    planned = replan(world).world
+    ahead = outlook(planned, build_network(planned))
+    queued = {jid for t in planned.tractors.values() for jid in t.queue}
+    assert set(ahead) == queued and all(o.slack >= -1e-6 for o in ahead.values())
+
+
+def test_job_with_little_spare_time_is_flagged_and_announced(world):
+    network = build_network(world)
+    planned = replan(world, network, Recorder)
+    ahead = outlook(planned.world, network)
+    job_id, tight = next(iter(ahead.items()))
+    squeezed = replace(world, jobs={**world.jobs, job_id: replace(world.jobs[job_id], deadline=tight.finish + 0.2)})
+    result = replan(squeezed, network, Recorder)
+    risky = [o.job_id for o in at_risk(result.world, network)]
+    messages = transcript(squeezed, network, {"type": "initial_plan"}, {}, result)
+    assert risky and {m.topic for m in messages if m.kind == "risk"} == set(risky)

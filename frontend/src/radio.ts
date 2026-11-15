@@ -18,6 +18,8 @@ export interface ReplanDigest {
   /** What each working tractor confirmed it will do, in its own words. */
   queues: { tractorId: string; text: string }[]
   messageCount: number
+  /** Jobs the Fleet Agent flagged as finishing too close to their deadline. */
+  risks: string[]
 }
 
 /** Summary: one card per plan, nothing on the map. All: every message, in the feed and over the map. */
@@ -70,6 +72,7 @@ function itemsOf(entry: LogEntry): RadioItem[] {
     changes: entry.data.diff?.changes ?? [],
     queues: messages.filter((m) => m.kind === 'ack').map((m) => ({ tractorId: m.sender, text: m.text.replace(/^Confirmed\. /, '') })),
     messageCount: messages.length,
+    risks: messages.filter((m) => m.kind === 'risk').map((m) => m.text),
   }
   const title = isInitial ? 'Opening plan' : `Re-plan: ${describeTrigger(trigger)}`
   return [

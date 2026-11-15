@@ -128,3 +128,14 @@ class World:
 
     def node_ids(self) -> list[str]:
         return [self.depot.id, *sorted(self.fields)]
+
+
+SHIFT_START_HOUR = 6.0
+DAY_HOURS = 24
+
+
+def clock_time(hours: float, shift_start: float = SHIFT_START_HOUR) -> str:
+    """Hours since the start of the shift as a time of day; past midnight it says so."""
+    total = max(0, round((shift_start + hours) * 60))
+    time = f"{total // 60 % DAY_HOURS:02d}:{total % 60:02d}"
+    return f"{time} next day" if total >= DAY_HOURS * 60 else time

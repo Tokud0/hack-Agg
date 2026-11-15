@@ -1,9 +1,14 @@
+import json
+from pathlib import Path
+
 import pytest
 from fastapi.testclient import TestClient
 
 from api.main import app
 from llm import assistant as claude
 from llm import provider
+
+DEMO_SCENARIO = Path(__file__).resolve().parents[1] / "scenario.json"
 
 
 @pytest.fixture
@@ -236,3 +241,19 @@ def test_scenario_with_an_event_for_a_missing_tractor_is_rejected(client):
     scenario = client.get("/api/scenario/random", params={"seed": 8}).json()
     scenario["demo_events"] = [{"at": 1.0, "type": "breakdown", "tractor_id": "T9"}]
     assert client.post("/api/scenario", json=scenario).status_code == 422
+
+
+def test_briefing_reports_progress_and_what_needs_attention(client):
+    client.post("/api/scenario", json=json.loads(DEMO_SCENARIO.read_text()))
+    client.post("/api/events", json={"type": "breakdown", "tractor_id": "T1"})
+    body = client.get("/api/briefing").json()
+    assert body["source"] == "template" and body["jobs"]["total"] == 10
+    kinds = {a["kind"] for a in body["attention"]}
+    assert "broken" in kinds and any(a["id"] == "T1" for a in body["attention"])
+    assert body["events"] and "need" in body["headline"]
+
+
+def test_state_gives_every_planned_job_its_spare_time(client):
+    jobs = client.get("/api/state").json()["runs"]["coordinator"]["jobs"]
+    planned = [j for j in jobs if j["status"] in ("assigned", "in_progress")]
+    assert planned and all(j["slack"] is not None and j["projected_finish"] is not None for j in planned)

@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { api, useLiveState } from './api'
 import type { Handoff } from './components/FieldMap'
 import { TractorIcon } from './components/Icons'
-import { BenchmarkModal, WhyDrawer } from './components/Overlays'
+import { BenchmarkModal, BriefingModal, WhyDrawer } from './components/Overlays'
 import { ExplanationCard, InvariantPanel } from './components/Panels'
 import { RadioFeed } from './components/radio/RadioFeed'
 import { NavRail } from './components/shell/NavRail'
@@ -51,6 +51,7 @@ export default function App() {
   const [handoffs, setHandoffs] = useState<Handoff[]>([])
   const [whyJob, setWhyJob] = useState<string | null>(null)
   const [showBench, setShowBench] = useState(false)
+  const [showBriefing, setShowBriefing] = useState(false)
   const [dockTab, setDockTab] = useState<DockTab>('radio')
   const [seenReplan, setSeenReplan] = useState<number | undefined>(undefined)
   const [baselineKind, setBaselineKind] = useState<BaselineKind>('baseline')
@@ -159,7 +160,7 @@ export default function App() {
         onReset={() => act(() => api.control('reset'))}
         onRandom={() => act(async () => api.uploadScenario(await api.randomScenario()))}
         surprisesLeft={session.surprises_left ?? 0}
-        isNavOpen={isNavOpen} onToggleNav={toggleNav} />
+        isNavOpen={isNavOpen} onToggleNav={toggleNav} onBriefing={() => setShowBriefing(true)} />
 
       <div className="flex flex-1 flex-col xl:min-h-0 xl:flex-row">
         {isNavOpen && <NavRail view={page} onNavigate={navigate} />}
@@ -195,6 +196,7 @@ export default function App() {
       <AnimatePresence>
         {whyJob && <WhyDrawer key={whyJob} jobId={whyJob} onClose={() => setWhyJob(null)} />}
         {showBench && <BenchmarkModal onClose={() => setShowBench(false)} />}
+        {showBriefing && <BriefingModal onClose={() => setShowBriefing(false)} />}
       </AnimatePresence>
     </div>
   )

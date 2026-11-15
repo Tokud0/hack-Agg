@@ -19,9 +19,10 @@ interface TopBarProps {
   surprisesLeft: number
   isNavOpen: boolean
   onToggleNav: () => void
+  onBriefing: () => void
 }
 
-export function TopBar({ scenario, time, isRunning, speed, speeds, provider, isConnected, onTogglePlay, onSpeed, onReset, onRandom, surprisesLeft, isNavOpen, onToggleNav }: TopBarProps) {
+export function TopBar({ scenario, time, isRunning, speed, speeds, provider, isConnected, onTogglePlay, onSpeed, onReset, onRandom, surprisesLeft, isNavOpen, onToggleNav, onBriefing }: TopBarProps) {
   const shiftShare = Math.min(1, time / SHIFT_HOURS)
   const hasAi = provider !== 'offline'
   return (
@@ -74,6 +75,8 @@ export function TopBar({ scenario, time, isRunning, speed, speeds, provider, isC
         <span className="flex items-center gap-1.5 text-[11px] text-white/50">
           <span className={`h-2 w-2 rounded-full ${isConnected ? 'bg-leaf' : 'bg-alarm'}`} />{isConnected ? 'Live' : 'Disconnected'}
         </span>
+        <button type="button" onClick={onBriefing} title="The shift so far in a few sentences, and what needs your attention"
+          className="flex items-center gap-1.5 rounded-lg bg-wheat/90 px-3 py-1.5 text-xs font-extrabold text-black hover:brightness-110"><SparkIcon size={13} />Briefing</button>
         <button type="button" onClick={onRandom} title="Start a new shift with random fields, tractors and jobs"
           className="flex items-center gap-1.5 rounded-lg border border-white/10 px-3 py-1.5 text-xs text-white/70 hover:bg-white/10 hover:text-white"><ShuffleIcon size={14} />Random shift</button>
         <button type="button" onClick={onReset} title="Start the shift over"

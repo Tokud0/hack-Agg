@@ -28,6 +28,7 @@ from .coordinator import (
 )
 from .models import TractorStatus, World
 from .replan import ReplanResult
+from .risk import JobOutlook, at_risk
 from .routing import RoadNetwork
 
 FLEET_AGENT = "fleet_agent"
@@ -42,7 +43,7 @@ AWARD_REASON: dict[str, str] = {"cheapest": "lowest added cost", "soonest": "soo
 class Message:
     sender: str
     to: str
-    kind: str  # note | alert | status | announce | bid | decline | award | route | claim | no_taker | trade | agree | flag | verdict | ack
+    kind: str  # note | alert | status | announce | bid | decline | award | route | claim | no_taker | trade | agree | flag | verdict | ack | risk
     phase: str  # situation | auction | negotiation | approval
     text: str
     topic: str = ""  # the job (or jobs) the message is about
@@ -280,7 +281,15 @@ def negotiation(result: ReplanResult) -> list[Message]:
 # --- approval: the safety gate and the tractors' confirmations ---------------
 
 
-def approval(result: ReplanResult) -> list[Message]:
+def _risk_message(o: JobOutlook) -> Message:
+    spare = max(0, round(o.slack * 60))
+    return Message(FLEET_AGENT, EVERYONE, "risk", "approval", topic=o.job_id,
+                   text=f"Watch {o.job_id}: {o.tractor_id} finishes it at {clock(o.finish)}, only {spare} min before its "
+                        f"{clock(o.deadline)} deadline. One more delay and it is lost.",
+                   data={"finish": round(o.finish, 2), "deadline": o.deadline, "slack": round(o.slack, 2)})
+
+
+def approval(result: ReplanResult, network: RoadNetwork) -> list[Message]:
     report = result.report
     if not result.accepted:
         return [Message(SAFETY_AGENT, FLEET_AGENT, "verdict", "approval",
@@ -300,7 +309,7 @@ def approval(result: ReplanResult) -> list[Message]:
         first = f"Finishing {tractor.current_job}, then " if tractor.current_job else ""
         queue = " → ".join(tractor.queue) or "nothing queued"
         acks.append(Message(tid, FLEET_AGENT, "ack", "approval", f"Confirmed. {first}{queue}.", data={"queue": list(tractor.queue)}))
-    return [*flags, verdict, *acks]
+    return [*flags, verdict, *acks, *(_risk_message(o) for o in at_risk(result.world, network))]
 
 
 def transcript(
@@ -308,4 +317,4 @@ def transcript(
 ) -> tuple[Message, ...]:
     """The whole conversation of one re-plan. `world` is the state the planner saw (after the event);
     `result` must come from `replan(..., new_observer=Recorder)`."""
-    return (*situation(world, network, trigger, released), *negotiation(result), *approval(result))
+    return (*situation(world, network, trigger, released), *negotiation(result), *approval(result, network))

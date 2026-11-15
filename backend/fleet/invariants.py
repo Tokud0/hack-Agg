@@ -6,7 +6,7 @@ from collections import Counter
 from dataclasses import dataclass
 
 from .feasibility import evaluate_queue, start_context
-from .models import JobStatus, Plan, TractorStatus, World
+from .models import JobStatus, Plan, TractorStatus, World, clock_time
 from .routing import RoadNetwork
 
 FUEL_TOLERANCE = 1e-6
@@ -62,7 +62,7 @@ def check_plan(world: World, plan: Plan, network: RoadNetwork) -> InvariantRepor
         if after_job.fuel < -FUEL_TOLERANCE:
             violations.append(f"hard_constraints: {tractor.id} runs out of fuel before finishing its current job {jid}")
         if job.status != JobStatus.DONE and after_job.time > job.deadline + 1e-6:
-            warnings.append(f"{jid} is in progress on {tractor.id} and will finish at {after_job.time:.1f}h, after its {job.deadline:.1f}h deadline")
+            warnings.append(f"{jid} is in progress on {tractor.id} and will finish at {clock_time(after_job.time)}, after its {clock_time(job.deadline)} deadline")
     for tid, queue in plan.queues.items():
         tractor = world.tractors[tid]
         if tractor.status == TractorStatus.BROKEN:

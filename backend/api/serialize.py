@@ -5,6 +5,7 @@ from __future__ import annotations
 from fleet.engine import Run, metrics
 from fleet.feasibility import evaluate_queue, start_context
 from fleet.models import JobStatus, TractorStatus
+from fleet.risk import outlook
 
 LOG_TAIL = 200
 
@@ -49,6 +50,7 @@ def _gantt(run: Run) -> list[dict]:
 
 def snapshot(run: Run) -> dict:
     world = run.world
+    ahead = outlook(world, run.network)
     return {
         "strategy": run.strategy,
         "time": round(world.time, 3),
@@ -83,6 +85,10 @@ def snapshot(run: Run) -> dict:
                 "tractor_id": j.tractor_id,
                 "reason": j.reason,
                 "completed_at": j.completed_at,
+                # Where the plan stands for this job: when it will be finished and the spare time before its deadline.
+                "projected_finish": round(ahead[j.id].finish, 3) if j.id in ahead else None,
+                "slack": round(ahead[j.id].slack, 3) if j.id in ahead else None,
+                "at_risk": j.id in ahead and ahead[j.id].is_at_risk,
             }
             for j in sorted(world.jobs.values(), key=lambda j: j.id)
         ],

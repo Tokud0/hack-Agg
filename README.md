@@ -28,7 +28,8 @@ Six pages, one top bar (run, clock, speed) and one side panel that stay in place
 
 - **Live**: the coordinator's map (fields fill in as they are worked, fuel rings, planned routes, hand-over arrows after a breakdown), live counters with the lead over the baseline, and a card per tractor with a *Simulate breakdown* button.
 - **Agents**: the orchestration pipeline, replayable for every re-plan of the shift (see below).
-- **Schedule**: Gantt by tractor (deadlines and events marked) and the full job table, for the coordinator or either baseline.
+- **Schedule**: Gantt by tractor (deadlines and events marked) and the full job table, for the coordinator or either baseline. Every planned job shows when it will finish and its spare time; a job the plan finishes less than 30 minutes before its deadline is marked **at risk** while it can still be saved (filter *At risk*, a dot on its chip, and a warning from the Fleet Agent in the plan summary).
+- **Briefing** (top bar): the shift so far in a few sentences, with counts and a list of what needs attention (broken tractors, jobs that cannot be done, jobs at risk, low fuel). The numbers and the list are computed from the live state; only the wording comes from the LLM.
 - **Compare**: baseline (FCFS or EDF) and coordinator side by side on the same shift, plus the 50-shift benchmark. Every job is a chip above each map (done on time, in progress, waiting, not done), and a job that was done on one side and lost on the other gets a ring, so "7 against 5" can be counted by eye. On the map each job has its own strip of its field, with a tick when it is done and a cross when it is not.
 - **Log**: every event, re-plan and finished job, with event-log export.
 - **Scenario**: build your own shift. Describe it in plain words (the LLM turns the text into tractors, fields and jobs; offline, the counts in the text are used), roll a random one, or place fields on the map by clicking and dragging and edit tractors and jobs in lists. *Random shift* in the top bar starts a new random shift in one click.
@@ -67,7 +68,7 @@ The **Agents** page shows this for any re-plan: the full conversation (filter by
 
 ```bash
 cd backend
-.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 170 tests
+.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 174 tests
 .venv/bin/python -m scripts.benchmark --n 50       # coordinator vs baseline table
 .venv/bin/python -m scripts.export_demo            # writes results/
 ```

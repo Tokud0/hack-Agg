@@ -30,6 +30,10 @@ export interface Job {
   tractor_id: string | null
   reason: string | null
   completed_at: number | null
+  /** When the current plan finishes this job, and the spare time before its deadline; null when it is not planned. */
+  projected_finish: number | null
+  slack: number | null
+  at_risk: boolean
 }
 
 export interface GanttBlock {
@@ -218,4 +222,19 @@ export interface WhatIfResult {
   headline: string
   answer: string
   source: string
+}
+
+export interface AttentionItem {
+  kind: 'broken' | 'lost' | 'at_risk' | 'low_fuel'
+  id: string
+  text: string
+}
+
+export interface ShiftBriefing {
+  headline: string
+  summary: string
+  source: string
+  clock: string
+  jobs: { total: number; done_on_time: number; in_progress: number; waiting: number; not_doable: number }
+  attention: AttentionItem[]
 }

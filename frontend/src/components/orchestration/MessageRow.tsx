@@ -5,13 +5,13 @@ import { ArrowRightIcon } from '../Icons'
 
 const KIND_LABEL: Record<string, string> = {
   alert: 'alert', status: 'status', announce: 'call', bid: 'bid', decline: 'pass', award: 'award', route: 'route', claim: 'claim',
-  no_taker: 'no taker', trade: 'offer', agree: 'agreed', flag: 'flag', verdict: 'verdict', ack: 'confirmed', explain: 'LLM',
+  no_taker: 'no taker', trade: 'offer', agree: 'agreed', flag: 'flag', verdict: 'verdict', ack: 'confirmed', explain: 'LLM', risk: 'at risk',
 }
 
 const KIND_TONE: Record<string, string> = {
   alert: 'bg-alarm/15 text-alarm', decline: 'bg-white/8 text-white/50', no_taker: 'bg-alarm/15 text-alarm', flag: 'bg-alarm/15 text-alarm',
   award: 'bg-leaf/15 text-leaf', claim: 'bg-leaf/15 text-leaf', agree: 'bg-leaf/15 text-leaf', ack: 'bg-leaf/15 text-leaf',
-  trade: 'bg-wheat/15 text-wheat', explain: 'bg-wheat/15 text-wheat', verdict: 'bg-sky-400/15 text-sky-300', route: 'bg-pink-300/15 text-pink-300',
+  trade: 'bg-wheat/15 text-wheat', explain: 'bg-wheat/15 text-wheat', risk: 'bg-wheat/15 text-wheat', verdict: 'bg-sky-400/15 text-sky-300', route: 'bg-pink-300/15 text-pink-300',
 }
 
 export function Avatar({ id }: { id: string }) {

@@ -51,6 +51,12 @@ export function ReplanCard({ item, replan, messages, explanation, isExpanded, on
           {hidden > 0 && <p className="mt-1 text-[11px] text-white/40">and {hidden} more</p>}
         </div>
       )}
+      {replan.risks.length > 0 && (
+        <div className="mt-2">
+          <div className={`${label} text-wheat/80`}>At risk</div>
+          <ul className="mt-1 space-y-0.5 text-[12px] leading-snug text-wheat">{replan.risks.map((r) => <li key={r}>{r}</li>)}</ul>
+        </div>
+      )}
       {!replan.isInitial && changes.length === 0 && <p className="mt-2 text-[12px] text-white/50">No job changed hands.</p>}
 
       <div className="mt-2 flex flex-wrap items-center justify-between gap-2 border-t border-white/8 pt-2">

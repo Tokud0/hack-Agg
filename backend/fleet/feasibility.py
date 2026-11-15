@@ -20,6 +20,7 @@ import math
 from dataclasses import dataclass, field
 
 from .models import Job, Tractor, TractorStatus, World
+from .models import clock_time
 from .routing import RoadNetwork
 
 EPS = 1e-6
@@ -181,7 +182,7 @@ def evaluate_queue(
         if finish > job.deadline + EPS:
             via = " (incl. refuel stop)" if leg.refuel else ""
             return fail(
-                f"{tractor.id} would finish {job.id} at {finish:.1f}h{via}, deadline {job.deadline:.1f}h",
+                f"{tractor.id} would finish {job.id} at {clock_time(finish)}{via}, deadline {clock_time(job.deadline)}",
                 job_id,
             )
 

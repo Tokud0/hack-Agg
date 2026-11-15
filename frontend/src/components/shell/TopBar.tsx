@@ -19,7 +19,7 @@ interface TopBarProps {
   onTogglePlay: () => void
   onSpeed: (speed: number) => void
   onReset: () => void
-  onRandom: (trouble: Trouble) => void
+  onRandom: (trouble: Trouble, seed?: number) => void
   surprisesLeft: number
   isNavOpen: boolean
   onToggleNav: () => void
@@ -31,6 +31,7 @@ export function TopBar({ scenario, time, isRunning, speed, speeds, provider, isC
   const shiftShare = Math.min(1, time / SHIFT_HOURS)
   const hasAi = provider !== 'offline'
   const [isPicking, setIsPicking] = useState(false)
+  const [seed, setSeed] = useState('')
   return (
     <header className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2 border-b border-soil-700 bg-soil-900 px-4 py-2">
       <div className="flex items-center gap-2.5">
@@ -95,8 +96,14 @@ export function TopBar({ scenario, time, isRunning, speed, speeds, provider, isC
           {isPicking && (
             <div role="menu" aria-label="How much should go wrong" className="absolute right-0 top-full z-50 mt-1.5 w-64 rounded-xl border border-soil-600 bg-soil-800 p-1.5 shadow-2xl">
               <div className="px-2 py-1 text-[10px] font-bold uppercase tracking-widest text-white/45">New random shift</div>
+              <label className="mx-2 mb-1 flex items-center gap-2 text-[11.5px] text-white/60">
+                Seed
+                <input value={seed} onChange={(e) => setSeed(e.target.value.replace(/\D/g, '').slice(0, 5))} inputMode="numeric" placeholder="random" aria-label="Seed for the random shift"
+                  className="w-full rounded-md border border-white/10 bg-black/30 px-2 py-1 font-mono text-[12px] text-white outline-none focus:border-leaf/60" />
+              </label>
+              <p className="mx-2 mb-1 text-[10.5px] leading-snug text-white/40">The same seed and level always give the same shift and the same events.</p>
               {TROUBLE_LEVELS.map((level) => (
-                <button type="button" role="menuitem" key={level.id} onClick={() => { setIsPicking(false); onRandom(level.id) }}
+                <button type="button" role="menuitem" key={level.id} onClick={() => { setIsPicking(false); onRandom(level.id, seed === '' ? undefined : Number(seed)) }}
                   className="block w-full rounded-lg px-2 py-1.5 text-left hover:bg-white/10">
                   <span className="block text-[12.5px] font-bold text-white">{level.label}</span>
                   <span className="block text-[11px] leading-snug text-white/50">{level.hint}</span>

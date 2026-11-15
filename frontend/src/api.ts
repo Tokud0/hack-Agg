@@ -41,7 +41,9 @@ export const api = {
     }),
   whatIf: (event: ProposedEvent) => request<WhatIfResult>('/api/whatif', { method: 'POST', body: JSON.stringify(event) }),
   currentScenario: () => request<Scenario>('/api/scenario'),
-  randomScenario: (trouble: Trouble) => request<Scenario>(`/api/scenario/random?trouble=${trouble}`),
+  /** A generated shift. The same seed and trouble level always give the same shift and the same events. */
+  randomScenario: (trouble: Trouble, seed?: number) =>
+    request<Scenario>(`/api/scenario/random?trouble=${trouble}${seed === undefined ? '' : `&seed=${seed}`}`),
   describeScenario: (text: string) =>
     request<{ scenario: Scenario; source: string; changes: string[] }>('/api/scenario/describe', { method: 'POST', body: JSON.stringify({ text }) }),
   checkScenario: (scenario: Scenario) =>

@@ -43,6 +43,12 @@
         "violations_total": 0
       }
     },
+    "recovery_ms": {
+      "events": 300,
+      "median": 3.89,
+      "p95": 8.83,
+      "max": 19.8
+    },
     "percent_vs_baseline": {
       "jobs_completed": 26.145552560646912,
       "share_done": 26.145552560646905,
@@ -269,6 +275,12 @@
         "violations_total": 0
       }
     },
+    "recovery_ms": {
+      "events": 456,
+      "median": 1.24,
+      "p95": 7.27,
+      "max": 17.07
+    },
     "percent_vs_baseline": {
       "jobs_completed": 26.284701712935615,
       "share_done": 26.284701712935615,
@@ -382,6 +394,12 @@
         "violations_total": 0
       }
     },
+    "recovery_ms": {
+      "events": 1440,
+      "median": 1.22,
+      "p95": 6.76,
+      "max": 22.56
+    },
     "percent_vs_baseline": {
       "jobs_completed": 21.823402727925327,
       "share_done": 21.82340272792534,
@@ -494,6 +512,12 @@
         "travel_per_job": 1.4162749504296102,
         "violations_total": 0
       }
+    },
+    "recovery_ms": {
+      "events": 2196,
+      "median": 1.47,
+      "p95": 7.44,
+      "max": 22.56
     },
     "percent_vs_baseline": {
       "jobs_completed": 26.051202482544593,

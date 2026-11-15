@@ -158,7 +158,7 @@ export default function App() {
         onTogglePlay={() => act(() => api.control(session.running ? 'pause' : 'play'))}
         onSpeed={(s) => act(() => api.control('speed', s))}
         onReset={() => act(() => api.control('reset'))}
-        onRandom={(trouble) => act(async () => api.uploadScenario(await api.randomScenario(trouble)))}
+        onRandom={(trouble, seed) => act(async () => api.uploadScenario(await api.randomScenario(trouble, seed)))}
         surprisesLeft={session.surprises_left ?? 0}
         isNavOpen={isNavOpen} onToggleNav={toggleNav} onBriefing={() => setShowBriefing(true)} weatherHolds={session.weather_holds ?? []} />
 

@@ -112,7 +112,8 @@ def test_replan_log_entry_carries_the_orchestration_trace(client):
     res = client.post("/api/events", json={"type": "breakdown", "tractor_id": "T1", "source": "copilot"})
     replan = res.json()["replan"]
     trace = replan["trace"]
-    assert set(trace) == {"sense", "agronomy", "navigate", "plan", "verify", "dispatch"}
+    assert set(trace) == {"sense", "agronomy", "navigate", "plan", "verify", "recovery", "dispatch"}
+    assert 0 < trace["recovery"]["event_to_plan_ms"] < 2000
     assert "T1" not in trace["sense"]["tractors_available"]
     assert sum(c["is_winner"] for c in trace["plan"]["candidates"]) == 1
     assert trace["verify"]["accepted"] is True

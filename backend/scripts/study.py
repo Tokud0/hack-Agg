@@ -74,10 +74,17 @@ def _scenario(family: str, seed: int) -> ScenarioIn:
 def _one(task: tuple[str, int]) -> dict:
     family, seed = task
     scenario = _scenario(family, seed)
+    finished = {s: run_to_end(start(scenario, s)) for s in STRATEGIES}
+    recoveries = [
+        e.data["trace"]["recovery"]["event_to_plan_ms"]
+        for e in finished["coordinator"].log
+        if e.kind == "replan" and e.data["trace"]["recovery"]["event_to_plan_ms"] is not None
+    ]
     return {
         "family": family,
         "jobs": len(scenario.jobs),
-        "runs": {s: {k: metrics(run_to_end(start(scenario, s)))[k] for k in SUMMED} for s in STRATEGIES},
+        "runs": {s: {k: metrics(run)[k] for k in SUMMED} for s, run in finished.items()},
+        "recoveries_ms": recoveries,
     }
 
 
@@ -100,6 +107,14 @@ def summarise(rows: list[dict]) -> dict:
             "violations_total": total["invariant_violations"],
         }
     out: dict = {"shifts": n, "jobs_per_shift": sum(r["jobs"] for r in rows) / n, "mean": means}
+    times = sorted(ms for r in rows for ms in r["recoveries_ms"])
+    if times:
+        out["recovery_ms"] = {
+            "events": len(times),
+            "median": times[len(times) // 2],
+            "p95": times[min(len(times) - 1, int(len(times) * 0.95))],
+            "max": times[-1],
+        }
     for other in ("baseline", "edf"):
         ours, theirs = means["coordinator"], means[other]
         out[f"percent_vs_{other}"] = {k: (ours[k] - theirs[k]) / theirs[k] * 100 if theirs[k] else None for k, _, _ in ROWS}
@@ -172,6 +187,18 @@ def render(report: dict, n: int) -> str:
             f"| Priority-weighted output | {t['priority_score']['better']} | {t['priority_score']['same']} | {t['priority_score']['worse']} |",
             f"| Driving | {t['travel_hours']['better']} | {t['travel_hours']['same']} | {t['travel_hours']['worse']} |",
             f"| Idle time | {t['idle_hours']['better']} | {t['idle_hours']['same']} | {t['idle_hours']['worse']} |",
+            "",
+        ]
+    rec = whole.get("recovery_ms")
+    if rec:
+        lines += [
+            "## How fast the fleet recovers",
+            "",
+            f"Wall-clock time from an event reaching the coordinator to a new plan that has passed the safety checks, over {rec['events']} events "
+            f"(breakdowns, closed roads, priority changes, weather): **median {rec['median']:.1f} ms, 95th percentile {rec['p95']:.1f} ms, slowest {rec['max']:.1f} ms**.",
+            "",
+            "This is the planner and the safety checks only, measured on one laptop core per shift with eight shifts running at once. It does not include the network, "
+            "the browser, or the LLM explanation, which is written afterwards and never holds the plan up. The slowed-down conversation in the Radio tab is a replay for the reader, not this time.",
             "",
         ]
     lines += ["## By kind of shift", ""]

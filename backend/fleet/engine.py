@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import time
 from dataclasses import asdict, dataclass, field, replace
 from typing import Literal
 
@@ -54,10 +55,12 @@ def _with_log(run: Run, *entries: LogEntry) -> Run:
     return replace(run, log=run.log + entries)
 
 
-def _replan_entry(run: Run, trigger: dict, released: dict[str, str]) -> Run:
+def _replan_entry(run: Run, trigger: dict, released: dict[str, str], event_started: float | None = None) -> Run:
     open_jobs = sorted(j.id for j in run.world.jobs.values() if j.status != JobStatus.DONE)
     available = sorted(t.id for t in run.world.tractors.values() if t.status != TractorStatus.BROKEN)
     result = replan(run.world, run.network, agents.Recorder if run.record_messages else None)
+    # Wall-clock time from the event reaching the engine to a verified plan in hand (None for the opening plan).
+    event_to_plan_ms = None if event_started is None else round((time.perf_counter() - event_started) * 1000, 2)
     diff = diff_plans(result.world, result.previous_plan, result.plan, trigger, released)
     messages = agents.transcript(run.world, run.network, trigger, released, result) if run.record_messages else ()
     entry = LogEntry(
@@ -93,6 +96,7 @@ def _replan_entry(run: Run, trigger: dict, released: dict[str, str]) -> Run:
                     "candidates": [asdict(c) for c in result.candidates],
                 },
                 "verify": {"duration_ms": round(result.verify_ms, 2), "accepted": result.accepted},
+                "recovery": {"event_to_plan_ms": event_to_plan_ms},
                 "dispatch": {
                     "jobs_changed": len(diff.changes),
                     "unassignable": sorted(result.plan.unassignable),
@@ -126,6 +130,7 @@ def start(
 
 
 def apply_event(run: Run, event: EventIn) -> Run:
+    started = time.perf_counter()
     world = run.world
     trigger = event.model_dump(exclude_none=True)
     released: dict[str, str] = {}
@@ -161,7 +166,7 @@ def apply_event(run: Run, event: EventIn) -> Run:
     network = build_network(world) if event.type == "block_road" else run.network
     run = _with_log(replace(run, world=world, network=network), LogEntry(round(world.time, 2), "event", message, trigger))
     if run.strategy == "coordinator":
-        run = _replan_entry(run, trigger, released)
+        run = _replan_entry(run, trigger, released, started)
     return run
 
 

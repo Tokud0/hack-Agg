@@ -52,6 +52,7 @@ function buildStages(entry: LogEntry, trace: ReplanTrace, explanation?: Explanat
   const holds = trace.agronomy?.holds ?? []
   const closed = trace.navigate.roads_closed
   const changed = trace.dispatch.jobs_changed
+  const recoveredIn = trace.recovery?.event_to_plan_ms
   return [
     {
       name: 'Intake', kind: isTelemetry ? 'sensor' : 'human', role: 'Turns a report into a typed event',
@@ -79,7 +80,7 @@ function buildStages(entry: LogEntry, trace: ReplanTrace, explanation?: Explanat
     {
       name: 'Safety Agent', kind: 'rules', role: 'Checks the plan before any tractor acts on it',
       result: isAccepted ? `Passed ${checks} of ${checks} checks` : `Vetoed: ${violations} violation${violations === 1 ? '' : 's'}`,
-      meta: isAccepted ? `${changed} job${changed === 1 ? '' : 's'} changed hands · ${trace.dispatch.unassignable.length} flagged` : 'kept the last valid plan',
+      meta: `${isAccepted ? `${changed} job${changed === 1 ? '' : 's'} changed hands · ${trace.dispatch.unassignable.length} flagged` : 'kept the last valid plan'}${recoveredIn === null || recoveredIn === undefined ? '' : ` · event to safe plan ${ms(recoveredIn)}`}`,
       tone: isAccepted ? 'ok' : 'bad', limit: 'Has a veto. A failed plan is thrown away.',
     },
     {

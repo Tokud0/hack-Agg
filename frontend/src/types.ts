@@ -93,6 +93,8 @@ export interface ReplanTrace {
   navigate: { locations: number; roads_closed: string[][] }
   plan: { duration_ms: number; score: number; candidates: PlanCandidate[] }
   verify: { duration_ms: number; accepted: boolean }
+  /** Wall-clock time from the event reaching the coordinator to a verified plan; null for the opening plan. */
+  recovery?: { event_to_plan_ms: number | null }
   dispatch: { jobs_changed: number; unassignable: string[] }
 }
 

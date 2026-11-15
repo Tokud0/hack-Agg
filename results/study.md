@@ -52,6 +52,12 @@ The same number of jobs does not mean the same shift. On the shifts where both f
 | Driving | 415 | 108 | 69 |
 | Idle time | 460 | 38 | 94 |
 
+## How fast the fleet recovers
+
+Wall-clock time from an event reaching the coordinator to a new plan that has passed the safety checks, over 2196 events (breakdowns, closed roads, priority changes, weather): **median 1.5 ms, 95th percentile 7.4 ms, slowest 22.6 ms**.
+
+This is the planner and the safety checks only, measured on one laptop core per shift with eight shifts running at once. It does not include the network, the browser, or the LLM explanation, which is written afterwards and never holds the plan up. The slowed-down conversation in the Radio tab is a replay for the reader, not this time.
+
 ## By kind of shift
 
 ### Benchmark: 10 jobs, 3 tractors, one breakdown, deadlines not adjusted

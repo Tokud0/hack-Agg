@@ -171,6 +171,13 @@ Supported events:
 - block_road: a, b (two node ids: fields or the depot)
 - change_priority: job_id, priority (1 = most urgent, 3 = least)
 For questions, answer from the state JSON and propose no events.
+- Counts: read them from `totals` and `totals.by_type`. Never count the jobs yourself.
+- How long, how much time, "how many times did it take": these all ask for a duration. Read `shift` (started_at, hours_elapsed, total_duration_hours, ended_at),
+  a job's `finished_at` and `work_hours`, a tractor's `hours_working` and `hours_driving`. If the shift
+  is not finished, say so and give the time elapsed so far.
+- Times of day in the state are clock times (06:00 is the shift start); use them as written.
+- A job with status "unassignable" cannot be done; its `reason` says why. Say so when it is relevant.
+Answer the question that was asked. If the state does not hold the answer, say that plainly.
 Only use ids that exist in the state. If ambiguous, ask a short clarifying question and propose no events.
 For fields you do not use in an event, return null. Keep reply under 3 sentences."""
 
@@ -212,7 +219,17 @@ def _rule_based_copilot(message: str, state: dict) -> CopilotReply:
     if jobs and any(w in lowered for w in ("urgent", "priority", "срочн", "приоритет")):
         prio = int(m.group(1)) if (m := re.search(r"P([123])", text)) else 1
         return CopilotReply(reply=f"Set {jobs[0]} to P{prio}?", events=[ProposedEvent(type="change_priority", job_id=jobs[0], priority=prio)])
-    return CopilotReply(reply="Offline mode: try 'T1 broke down', 'road F2 F4 closed' or 'J05 urgent'.", events=[])
+    return CopilotReply(reply=f"{_state_summary(state)} Offline mode: I can also take 'T1 broke down', 'road F2 F4 closed' or 'J05 urgent'.", events=[])
+
+
+def _state_summary(state: dict) -> str:
+    """One factual sentence about the shift, for when no LLM is there to answer a question."""
+    totals, shift = state.get("totals"), state.get("shift")
+    if not totals or not shift:
+        return ""
+    when = (f"The shift ended at {shift['ended_at']} after {shift['total_duration_hours']} h" if shift["is_finished"]
+            else f"At {state['clock_now']}, {shift['hours_elapsed']} h into the shift")
+    return f"{when}: {totals['done_on_time']} of {totals['jobs']} jobs done on time, {totals['cannot_be_done']} cannot be done."
 
 
 # --- what-if forecast --------------------------------------------------------

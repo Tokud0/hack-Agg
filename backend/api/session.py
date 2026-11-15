@@ -238,19 +238,67 @@ class Session:
         }
 
     def copilot_state(self) -> dict:
-        world = self.runs["coordinator"].world
+        """Everything the copilot may answer from. Counts and durations are worked out here, so the LLM reads them
+        instead of counting or subtracting; times of day are clock strings."""
+        run = self.runs["coordinator"]
+        world = run.world
+        start = self.scenario.shift_start_hour
+        totals = engine.metrics(run)
+        jobs = list(world.jobs.values())
+        is_finished = engine.finished(run)
+
+        def count(job_type: str | None, *statuses: str) -> int:
+            return sum(1 for j in jobs if (job_type is None or j.type == job_type) and j.status.value in statuses)
+
+        by_type = {
+            job_type: {
+                "total": count(job_type, "pending", "assigned", "in_progress", "done", "unassignable"),
+                "done": count(job_type, "done"),
+                "in_progress": count(job_type, "in_progress"),
+                "waiting": count(job_type, "pending", "assigned"),
+                "cannot_be_done": count(job_type, "unassignable"),
+            }
+            for job_type in sorted({j.type for j in jobs})
+        }
         return {
             "time_h": round(world.time, 2),
+            "clock_now": clock(world.time, start),
+            "shift": {
+                "started_at": clock(0, start),
+                "is_finished": is_finished,
+                "hours_elapsed": round(world.time, 2),
+                # How long the whole shift took, known only once every job is done or given up.
+                "total_duration_hours": round(world.time, 2) if is_finished else None,
+                "ended_at": clock(world.time, start) if is_finished else None,
+            },
+            "totals": {
+                "jobs": len(jobs),
+                "done_on_time": totals["jobs_completed"],
+                "done": count(None, "done"),
+                "in_progress": count(None, "in_progress"),
+                "waiting": count(None, "pending", "assigned"),
+                "cannot_be_done": count(None, "unassignable"),
+                "urgent_done_on_time": totals["priority1_completed"],
+                "driving_hours": totals["travel_hours"],
+                "idle_hours": totals["idle_hours"],
+                "refuel_stops": totals["refuel_stops"],
+                "replans": totals["replans"],
+                "by_type": by_type,
+            },
             "tractors": {
                 t.id: {"implement": t.implement.value, "status": t.status.value, "fuel": round(t.fuel),
-                       "current_job": t.current_job, "queue": list(t.queue)}
+                       "fuel_capacity": round(t.fuel_capacity), "current_job": t.current_job, "queue": list(t.queue),
+                       "hours_working": round(t.work_time, 2), "hours_driving": round(t.travel_time, 2)}
                 for t in world.tractors.values()
             },
             "jobs": {
                 j.id: {"type": j.type, "field": j.field_id, "priority": j.priority, "deadline": j.deadline,
-                       "status": j.status.value, "tractor": j.tractor_id, "reason": j.reason}
-                for j in world.jobs.values()
+                       "due_at": clock(j.deadline, start), "work_hours": j.work_hours,
+                       "status": j.status.value, "tractor": j.tractor_id, "reason": j.reason,
+                       "finished_at": clock(j.completed_at, start) if j.completed_at is not None else None}
+                for j in jobs
             },
+            "events": [f"{clock(e.time, start)} {e.message}" for e in run.log if e.kind == "event"],
             "nodes": [world.depot.id, *sorted(world.fields)],
         }
 

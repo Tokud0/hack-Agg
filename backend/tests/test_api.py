@@ -287,3 +287,63 @@ def test_weather_event_without_a_duration_is_rejected(client):
 def test_random_shift_can_be_asked_for_no_trouble_at_all(client):
     scenario = client.get("/api/scenario/random", params={"seed": 9, "trouble": "none"}).json()
     assert scenario["demo_events"] == [] and scenario["auto_events"] is False
+
+
+def test_copilot_state_carries_ready_made_counts_and_durations(client):
+    client.post("/api/scenario", json=json.loads(DEMO_SCENARIO.read_text()))
+    from api.main import session
+    state = session().copilot_state()
+    assert state["shift"] == {"started_at": "06:00", "is_finished": False, "hours_elapsed": 0.0, "total_duration_hours": None, "ended_at": None}
+    assert state["totals"]["jobs"] == 10 and state["totals"]["by_type"]["spray"]["total"] == 7 and state["totals"]["by_type"]["mow"]["total"] == 3
+
+    session().running, session().speed = True, 8.0
+    for _ in range(150):
+        session().advance(0.1)
+    done = session().copilot_state()
+    totals = done["totals"]
+    assert done["shift"]["is_finished"] and done["shift"]["total_duration_hours"] == done["shift"]["hours_elapsed"] > 5
+    assert totals["done"] + totals["cannot_be_done"] == totals["jobs"] and totals["in_progress"] == totals["waiting"] == 0
+    assert sum(t["done"] for t in totals["by_type"].values()) == totals["done"]
+    assert all(j["finished_at"] for j in done["jobs"].values() if j["status"] == "done")
+
+
+def test_offline_copilot_answers_a_question_with_the_facts(client):
+    res = client.post("/api/copilot", json={"message": "how long did it take to do all the work?"})
+    assert res.status_code == 200 and "jobs done on time" in res.json()["reply"] and res.json()["events"] == []
+
+
+def test_rate_limited_calls_move_to_the_second_key_then_the_backup_model(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "first")
+    monkeypatch.setenv("GROQ_API_KEY_2", "second")
+    calls = []
+
+    def fake_once(model, api_key, system, user, schema):
+        calls.append((model, api_key))
+        is_last = (model, api_key) == (provider.groq_backup_model(), "second")
+        return (schema(headline="ok", summary="ok"), False) if is_last else (None, True)
+
+    monkeypatch.setattr(provider, "_groq_once", fake_once)
+    result = provider._groq("system", "user", claude.Briefing)
+    main, backup = provider.groq_model(), provider.groq_backup_model()
+    assert calls == [(main, "first"), (main, "second"), (backup, "first"), (backup, "second")] and result.headline == "ok"
+
+
+def test_second_key_answers_when_the_first_is_rate_limited(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "first")
+    monkeypatch.setenv("GROQ_API_KEY_2", "second")
+    calls = []
+
+    def fake_once(model, api_key, system, user, schema):
+        calls.append(api_key)
+        return (None, True) if api_key == "first" else (schema(headline="ok", summary="ok"), False)
+
+    monkeypatch.setattr(provider, "_groq_once", fake_once)
+    assert provider._groq("system", "user", claude.Briefing).headline == "ok" and calls == ["first", "second"]
+
+
+def test_nothing_else_is_tried_for_failures_other_than_a_rate_limit(monkeypatch):
+    monkeypatch.setenv("GROQ_API_KEY", "first")
+    monkeypatch.setenv("GROQ_API_KEY_2", "second")
+    calls = []
+    monkeypatch.setattr(provider, "_groq_once", lambda model, *rest: (calls.append(model), (None, False))[1])
+    assert provider._groq("system", "user", claude.Briefing) is None and len(calls) == 1

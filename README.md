@@ -73,7 +73,7 @@ The **Agents** page shows this for any re-plan: the full conversation (filter by
 
 ```bash
 cd backend
-.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 245 tests
+.venv/bin/pytest --cov=fleet --cov=api --cov=llm   # 249 tests
 .venv/bin/python -m scripts.benchmark --n 50       # coordinator vs baseline table
 .venv/bin/python -m scripts.export_demo            # writes results/
 ```
@@ -121,4 +121,4 @@ Demo scenario, with T1 breaking down at 08:00: the coordinator completes 8 jobs,
 
 ## LLM (`backend/llm/`)
 
-`provider.py` uses Groq (`GROQ_MODEL`, default `openai/gpt-oss-120b`, strict JSON-schema output) when `GROQ_API_KEY` is set, otherwise Claude (`claude-opus-5-5`) when `ANTHROPIC_API_KEY` is set, otherwise templates. `assistant.py` holds the features. The model only ever sees structured facts: the plan diff, the score breakdown, the forecast numbers, or a summary of the state. Copilot proposals appear as an "Understood as … Apply / Cancel" card, and every event and job is validated by the coordinator before it runs.
+`provider.py` uses Groq (`GROQ_MODEL`, default `openai/gpt-oss-120b`, strict JSON-schema output) when `GROQ_API_KEY` is set, otherwise Claude (`claude-opus-5-5`) when `ANTHROPIC_API_KEY` is set, otherwise templates. When the main Groq model is rate limited (the free tier allows 8,000 tokens a minute), the call is retried once on a backup model with its own allowance (`GROQ_BACKUP_MODEL`, default `openai/gpt-oss-20b`). `assistant.py` holds the features. The copilot is given counts, durations and clock times already worked out by code, so it reads them instead of counting or subtracting. The model only ever sees structured facts: the plan diff, the score breakdown, the forecast numbers, or a summary of the state. Copilot proposals appear as an "Understood as … Apply / Cancel" card, and every event and job is validated by the coordinator before it runs.

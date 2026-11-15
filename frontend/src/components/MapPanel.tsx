@@ -27,7 +27,7 @@ export function MapPanel({ run, map, title, subtitle, accent, highlight, handoff
         <h2 className="text-sm font-extrabold uppercase tracking-widest" style={{ color: accent }}>{title}</h2>
         <span className="text-[11px] text-white/45">{subtitle}</span>
       </div>
-      <Counters metrics={run.metrics} accent={accent} compareTo={compareTo} />
+      <Counters metrics={run.metrics} accent={accent} compareTo={compareTo} isCompact />
       <div className="mt-2"><JobChips jobs={run.jobs} compareTo={compareJobs} onSelectJob={onSelectJob} /></div>
       <div className="mt-2 min-h-0 flex-1">
         <FieldMap run={run} map={map} highlight={highlight} handoffs={handoffs} onSelectJob={onSelectJob} speech={speech} />

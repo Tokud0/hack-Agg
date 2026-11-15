@@ -30,15 +30,17 @@ interface CountersProps {
   accent: string
   /** When given, shows how far ahead of this run we are. */
   compareTo?: Metrics
+  /** Short labels, for the narrow tiles of two panels side by side. */
+  isCompact?: boolean
 }
 
 type CounterKey = 'jobs_completed' | 'priority1_completed' | 'travel_per_job' | 'idle_hours'
 
-const COUNTERS: { key: CounterKey; label: string; suffix: string; decimals: number; higherIsBetter: boolean }[] = [
-  { key: 'jobs_completed', label: 'Done on time', suffix: '', decimals: 0, higherIsBetter: true },
-  { key: 'priority1_completed', label: 'Urgent (P1)', suffix: '', decimals: 0, higherIsBetter: true },
-  { key: 'travel_per_job', label: 'Driving per job', suffix: 'h', decimals: 2, higherIsBetter: false },
-  { key: 'idle_hours', label: 'Standing idle', suffix: 'h', decimals: 1, higherIsBetter: false },
+const COUNTERS: { key: CounterKey; label: string; short: string; suffix: string; decimals: number; higherIsBetter: boolean }[] = [
+  { key: 'jobs_completed', label: 'Done on time', short: 'On time', suffix: '', decimals: 0, higherIsBetter: true },
+  { key: 'priority1_completed', label: 'Urgent (P1)', short: 'Urgent', suffix: '', decimals: 0, higherIsBetter: true },
+  { key: 'travel_per_job', label: 'Driving per job', short: 'Drive / job', suffix: 'h', decimals: 2, higherIsBetter: false },
+  { key: 'idle_hours', label: 'Standing idle', short: 'Idle', suffix: 'h', decimals: 1, higherIsBetter: false },
 ]
 
 function Delta({ value, decimals, higherIsBetter }: { value: number; decimals: number; higherIsBetter: boolean }) {
@@ -52,7 +54,7 @@ function Delta({ value, decimals, higherIsBetter }: { value: number; decimals: n
   )
 }
 
-export function Counters({ metrics, accent, compareTo }: CountersProps) {
+export function Counters({ metrics, accent, compareTo, isCompact = false }: CountersProps) {
   const items = COUNTERS.map((c) => ({
     ...c,
     value: metrics[c.key],
@@ -66,7 +68,7 @@ export function Counters({ metrics, accent, compareTo }: CountersProps) {
     <div className="grid grid-cols-4 gap-2">
       {items.map((it) => (
         <div key={it.label} className="rounded-lg bg-black/25 px-2.5 py-1.5">
-          <div className="truncate text-[10px] uppercase tracking-wider text-white/45" title={it.label}>{it.label}</div>
+          <div className="truncate text-[10px] uppercase tracking-wider text-white/45" title={it.label}>{isCompact ? it.short : it.label}</div>
           <div className="flex flex-wrap items-baseline font-mono text-lg font-bold" style={{ color: accent }}>
             <AnimatedNumber value={it.value} decimals={it.decimals} />
             <span className="text-xs text-white/40">{it.suffix}</span>

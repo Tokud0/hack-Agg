@@ -33,14 +33,14 @@ export function TopBar({ scenario, time, isRunning, speed, speeds, provider, isC
   const [isPicking, setIsPicking] = useState(false)
   const [seed, setSeed] = useState('')
   return (
-    <header className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2 border-b border-soil-700 bg-soil-900 px-4 py-2">
+    <header className="flex shrink-0 flex-wrap items-center gap-x-6 gap-y-2 border-b border-soil-700 bg-soil-900 px-4 py-2 max-[1439px]:gap-x-3">
       <div className="flex items-center gap-2.5">
         <button type="button" onClick={onToggleNav} aria-pressed={isNavOpen} aria-label={isNavOpen ? 'Hide the menu' : 'Show the menu'} title={isNavOpen ? 'Hide the menu' : 'Show the menu'}
           className="rounded-lg p-2 text-white/55 hover:bg-white/10 hover:text-white"><MenuIcon size={18} /></button>
         <span className="grid h-9 w-9 place-items-center rounded-lg bg-leaf/15 text-leaf"><TractorIcon size={22} /></span>
         <div>
           <div className="text-[15px] font-extrabold leading-tight tracking-tight">RUN THE FLEET</div>
-          <div className="text-[10px] uppercase tracking-[0.18em] text-white/45">{scenario}</div>
+          <div className="max-w-[230px] truncate text-[10px] uppercase tracking-[0.18em] text-white/45 max-[1439px]:max-w-[150px]" title={scenario}>{scenario}</div>
         </div>
       </div>
 
@@ -49,17 +49,17 @@ export function TopBar({ scenario, time, isRunning, speed, speeds, provider, isC
           className="flex w-[92px] items-center justify-center gap-1.5 rounded-lg bg-leaf py-2 text-sm font-extrabold text-black hover:brightness-110">
           {isRunning ? <><PauseIcon size={14} />Pause</> : <><PlayIcon size={14} />Run</>}
         </button>
-        <div className="w-[136px]">
+        <div className="min-[1440px]:w-[136px]">
           <div className="flex items-baseline justify-between">
             <span className="font-mono text-xl font-bold leading-none text-leaf">{clock(time)}</span>
-            <span className="text-[9.5px] uppercase tracking-wider text-white/40">shift time</span>
+            <span className="text-[9.5px] uppercase tracking-wider text-white/40 max-[1439px]:hidden">shift time</span>
           </div>
           <div className="mt-1.5 h-1 overflow-hidden rounded-full bg-white/10">
             <motion.div className="h-full bg-leaf" animate={{ width: `${shiftShare * 100}%` }} transition={{ duration: 0.15 }} />
           </div>
         </div>
         <div className="flex items-center gap-1.5">
-          <span className="text-[9.5px] uppercase tracking-wider text-white/40">Speed</span>
+          <span className="text-[9.5px] uppercase tracking-wider text-white/40 max-[1439px]:hidden">Speed</span>
           <div className="flex rounded-lg bg-black/30 p-0.5" role="group" aria-label="Simulation speed">
             {speeds.map((s) => (
               <button type="button" key={s} onClick={() => onSpeed(s)} aria-pressed={speed === s}
@@ -85,7 +85,8 @@ export function TopBar({ scenario, time, isRunning, speed, speeds, provider, isC
           <SparkIcon size={11} />{hasAi ? `AI: ${provider}` : 'AI offline'}
         </span>
         <span className="flex items-center gap-1.5 text-[11px] text-white/50">
-          <span className={`h-2 w-2 rounded-full ${isConnected ? 'bg-leaf' : 'bg-alarm'}`} />{isConnected ? 'Live' : 'Disconnected'}
+          <span className={`h-2 w-2 rounded-full ${isConnected ? 'bg-leaf' : 'bg-alarm'}`} title={isConnected ? 'Connected to the coordinator' : 'Disconnected'} />
+          <span className={isConnected ? 'max-[1439px]:hidden' : ''}>{isConnected ? 'Live' : 'Disconnected'}</span>
         </span>
         <button type="button" onClick={onBriefing} title="The shift so far in a few sentences, and what needs your attention"
           className="flex items-center gap-1.5 rounded-lg bg-wheat/90 px-3 py-1.5 text-xs font-extrabold text-black hover:brightness-110"><SparkIcon size={13} />Briefing</button>

@@ -132,7 +132,9 @@ def ask_tractor(facts: dict, question: str) -> tuple[str, str]:
 WHY_SYSTEM = """You answer an operator asking why a job was assigned the way it was.
 You get the coordinator's facts as JSON: chosen tractor, queue position, travel, planned finish,
 deadline slack, fuel before/after, and every alternative tractor with why it was rejected.
-Answer in 2-4 short sentences. Name the decisive constraint (implement, fuel, deadline) with the actual numbers."""
+Answer in 2-4 short sentences. Name the decisive constraint (implement, fuel, deadline) with the actual numbers.
+Times in the facts are hours since the 06:00 shift start: write them as times of day (11.0 is 17:00, 10.25 is 16:15);
+keep durations such as slack or travel in hours or minutes. Fuel is in tank units, not litres."""
 
 
 class WhyAnswer(BaseModel):

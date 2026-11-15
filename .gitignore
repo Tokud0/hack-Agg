@@ -8,3 +8,4 @@ frontend/dist/
 /api
 *.env
 !.env.example
+.DS_Store

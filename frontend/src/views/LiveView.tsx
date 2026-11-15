@@ -67,7 +67,7 @@ export function LiveView({ run, map, baselineKind, baselineMetrics, highlight, h
           <div className="min-h-0 flex-1">
             <FieldMap run={run} map={map} highlight={highlight} handoffs={handoffs} onSelectJob={onSelectJob} speech={speech} />
           </div>
-          <div className="mt-2 flex flex-col gap-1"><JobChipsLegend /><MapLegend /></div>
+          <div className="mt-2 flex flex-col gap-1 [@media(max-height:820px)]:hidden"><JobChipsLegend /><MapLegend /></div>
         </section>
         <section className="flex min-h-0 flex-col" aria-label="Fleet status">
           <h2 className="mb-2 px-1 text-xs font-bold uppercase tracking-widest text-white/60">Fleet · one agent per tractor</h2>

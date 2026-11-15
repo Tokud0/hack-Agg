@@ -38,7 +38,7 @@ export function CompareView({ coordinator, baseline, baselineKind, onBaselineKin
         <MapPanel run={coordinator} map={map} accent="#7bd88f" title="Our coordinator" subtitle="constraint-safe re-planning"
           highlight={highlight} handoffs={handoffs} compareTo={baseline.metrics} onSelectJob={onSelectJob} speech={speech} compareJobs={baseline.jobs} />
       </div>
-      <div className="flex flex-col gap-1"><JobChipsLegend hasComparison /><MapLegend /></div>
+      <div className="flex flex-col gap-1 [@media(max-height:820px)]:hidden"><JobChipsLegend hasComparison /><MapLegend /></div>
     </div>
   )
 }
